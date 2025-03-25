@@ -27,6 +27,4 @@ Reset to Default – Use the reset button in the settings panel to restore defau
 
 XP Display Options – Toggle XP text visibility with the settings menu.
 
-Why Use MyExpBar?
-
 If you want a cleaner, more informative, and customizable XP bar without unnecessary clutter, BetterXPbaris the perfect solution!
