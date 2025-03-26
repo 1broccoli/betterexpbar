@@ -1,0 +1,6 @@
+## Interface: 11400
+## Title: My|cFF3B9C9CExpBar|r 
+## Notes: A moveable experience bar addon for WoW Classic
+## Author: Pegga
+## SavedVariables: MyExpBarSettings
+myexpbar.lua
