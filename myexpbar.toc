@@ -2,5 +2,6 @@
 ## Title: My|cFF3B9C9CExpBar|r 
 ## Notes: A moveable experience bar addon for WoW Classic
 ## Author: Pegga
+## Version: 1.1
 ## SavedVariables: MyExpBarSettings
 myexpbar.lua
