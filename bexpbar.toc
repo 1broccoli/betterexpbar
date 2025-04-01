@@ -1,7 +1,7 @@
 ## Interface: 11400
-## Title: My|cFF3B9C9CBetterExpBar|r 
+## Title: |cFF3B9C9CBetter|r Exp Bar 
 ## Notes: A moveable experience bar addon for WoW Classic
 ## Author: Pegga
-## Version: 1.3
+## Version: 1.3.1
 ## SavedVariables: bexpbarDB
 bexpbar.lua
