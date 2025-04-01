@@ -109,7 +109,7 @@ local function HideDefaultExpBar()
         ReputationWatchBar:UnregisterAllEvents()
     end
 end
-
+expBarFrame:RegisterEvent("PLAYER_XP_UPDATE")
 expBarFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 expBarFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_ENTERING_WORLD" then
