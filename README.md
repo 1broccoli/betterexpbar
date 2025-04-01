@@ -1,9 +1,12 @@
 # betterexpbar
 BetterExpBar is a lightweight and customizable addon for World of Warcraft Classic that enhances the default experience bar with improved visibility, customization options, and added functionality.
 
-![beb1](https://github.com/user-attachments/assets/80929227-cd2a-419d-b45b-0f776677ef7e)
+![exp123](https://github.com/user-attachments/assets/87669038-90df-48d8-ab8b-711a23d23fc9)
 
-![beb2](https://github.com/user-attachments/assets/5417034c-a6a6-43f1-9521-46c41a8bcd74)
+![image](https://github.com/user-attachments/assets/f4a5e24c-c0bf-4c89-b195-28ae29892288)
+
+![image](https://github.com/user-attachments/assets/ab9e82f3-1d44-4e15-80c5-df0d9104d2c1)
+
 
 BetterXPbar– Enhanced Experience Bar for WoW Classic
 
