@@ -416,8 +416,6 @@ end)
 
 -- Ensure the larger frame is resizable with limits
 largerFrame:SetResizable(true)
-largerFrame:SetMinResize(20, 15) -- Minimum size for the frame (including padding)
-largerFrame:SetMaxResize(1000, 200) -- Maximum size for the frame
 
 -- Restore the frame's position and size on load
 RestoreFramePosition(expBarContainer)
