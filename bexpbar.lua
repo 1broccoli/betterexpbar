@@ -115,7 +115,7 @@ local expBarFrame = CreateFrame("StatusBar", "CustomExpBar", largerFrame, "TextS
 expBarFrame:SetSize(1024, 20)
 expBarFrame:SetPoint("CENTER", largerFrame, "CENTER", 0, 0)
 expBarFrame:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-expBarFrame:SetStatusBarColor(0, 1, 0)
+expBarFrame:SetStatusBarColor(0.58, 0, 0.55) -- Purple color (RGB: 148, 0, 140)
 expBarFrame:SetAlpha(0.8)
 expBarFrame:SetFrameLevel(2)
 expBarFrame:Show()
@@ -309,7 +309,8 @@ tooltipFrame:SetBackdrop({
 })
 tooltipFrame:SetBackdropColor(0, 0, 0, 0.8)
 tooltipFrame:SetBackdropBorderColor(1, 1, 1, 1)
-tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, 10) 
+tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, 10)
+tooltipFrame:SetFrameStrata("TOOLTIP") -- Set the frame strata higher
 tooltipFrame:Hide()
 
 local tooltipText = tooltipFrame:CreateFontString(nil, "OVERLAY")
@@ -328,9 +329,11 @@ expBarFrame:SetScript("OnEnter", function(self)
     local maxXP = UnitXPMax and UnitXPMax("player") or 1 -- Avoid division by zero
     local restedXP = GetXPExhaustion and (GetXPExhaustion() or 0) or 0
     local remainingXP = maxXP - currentXP
+    local playerLevel = UnitLevel("player") or 0
 
     tooltipText:SetText(string.format(
-        "Current: %s / %s\nRested: |cff3399ff+%s|r\nRemaining: |cffa335ee%s|r",
+        "Level: |cff00ff00%d|r\nCurrent: %s / %s\nRested: |cff3399ff+%s|r\nRemaining: |cffa335ee%s|r",
+        playerLevel,
         "|cffffff00" .. FormatNumber(currentXP) .. "|r",
         FormatNumber(maxXP),
         FormatNumber(restedXP),
