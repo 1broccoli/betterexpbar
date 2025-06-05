@@ -131,6 +131,51 @@ local expText = expBarFrame:CreateFontString(nil, "OVERLAY")
 expText:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
 expText:SetPoint("CENTER", expBarFrame, "CENTER", 0, 0)
 
+-- Blizzard-style dialog box to act as a tooltip
+local tooltipFrame = CreateFrame("Frame", "ExpBarTooltipFrame", UIParent, "BackdropTemplate")
+tooltipFrame:SetSize(200, 100)
+tooltipFrame:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    edgeSize = 10,
+})
+tooltipFrame:SetBackdropColor(0, 0, 0, 0.8)
+tooltipFrame:SetBackdropBorderColor(1, 1, 1, 1)
+tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, 10)
+tooltipFrame:SetFrameStrata("TOOLTIP") -- Set the frame strata higher
+tooltipFrame:Hide()
+
+local tooltipText = tooltipFrame:CreateFontString(nil, "OVERLAY")
+tooltipText:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
+tooltipText:SetPoint("TOPLEFT", tooltipFrame, "TOPLEFT", 10, -10)
+tooltipText:SetJustifyH("LEFT")
+tooltipText:SetJustifyV("TOP")
+tooltipText:SetText("")
+
+local function FormatNumber(number)
+    return tostring(number)
+end
+
+-- Helper to update tooltip text
+local function UpdateTooltipText()
+    local currentXP = UnitXP and UnitXP("player") or 0
+    local maxXP = UnitXPMax and UnitXPMax("player") or 1 -- Avoid division by zero
+    local restedXP = GetXPExhaustion and (GetXPExhaustion() or 0) or 0
+    local remainingXP = maxXP - currentXP
+    local playerLevel = UnitLevel("player") or 0
+
+    tooltipText:SetText(string.format(
+        "Level: |cff00ff00%d|r\nCurrent: %s / %s\nRested: |cff3399ff+%s|r\nRemaining: |cffa335ee%s|r",
+        playerLevel,
+        "|cffffff00" .. FormatNumber(currentXP) .. "|r",
+        FormatNumber(maxXP),
+        FormatNumber(restedXP),
+        FormatNumber(remainingXP)
+    ))
+
+    tooltipFrame:SetSize(tooltipText:GetStringWidth() + 20, tooltipText:GetStringHeight() + 20)
+end
+
 local function UpdateLargerFrame()
     if not largerFrame.isResizing then
         largerFrame.isResizing = true
@@ -156,6 +201,11 @@ local function UpdateExpBar()
         expText:SetText(string.format("%d%%", (currentXP / maxXP) * 100))
     else
         expText:SetText("0%")
+    end
+
+    -- Update tooltip if visible
+    if tooltipFrame:IsShown() then
+        UpdateTooltipText()
     end
 end
 
@@ -299,55 +349,6 @@ SlashCmdList["ENABLEEXPBAR"] = function()
     ReloadUI() -- Reload the UI to reinitialize the addon
 end
 
--- Blizzard-style dialog box to act as a tooltip
-local tooltipFrame = CreateFrame("Frame", "ExpBarTooltipFrame", UIParent, "BackdropTemplate")
-tooltipFrame:SetSize(200, 100)
-tooltipFrame:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    edgeSize = 10,
-})
-tooltipFrame:SetBackdropColor(0, 0, 0, 0.8)
-tooltipFrame:SetBackdropBorderColor(1, 1, 1, 1)
-tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, 10)
-tooltipFrame:SetFrameStrata("TOOLTIP") -- Set the frame strata higher
-tooltipFrame:Hide()
-
-local tooltipText = tooltipFrame:CreateFontString(nil, "OVERLAY")
-tooltipText:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
-tooltipText:SetPoint("TOPLEFT", tooltipFrame, "TOPLEFT", 10, -10)
-tooltipText:SetJustifyH("LEFT")
-tooltipText:SetJustifyV("TOP")
-tooltipText:SetText("")
-
-local function FormatNumber(number)
-    return tostring(number)
-end
-
-expBarFrame:SetScript("OnEnter", function(self)
-    local currentXP = UnitXP and UnitXP("player") or 0
-    local maxXP = UnitXPMax and UnitXPMax("player") or 1 -- Avoid division by zero
-    local restedXP = GetXPExhaustion and (GetXPExhaustion() or 0) or 0
-    local remainingXP = maxXP - currentXP
-    local playerLevel = UnitLevel("player") or 0
-
-    tooltipText:SetText(string.format(
-        "Level: |cff00ff00%d|r\nCurrent: %s / %s\nRested: |cff3399ff+%s|r\nRemaining: |cffa335ee%s|r",
-        playerLevel,
-        "|cffffff00" .. FormatNumber(currentXP) .. "|r",
-        FormatNumber(maxXP),
-        FormatNumber(restedXP),
-        FormatNumber(remainingXP)
-    ))
-
-    tooltipFrame:SetSize(tooltipText:GetStringWidth() + 20, tooltipText:GetStringHeight() + 20)
-    tooltipFrame:Show()
-end)
-
-expBarFrame:SetScript("OnLeave", function(self)
-    tooltipFrame:Hide()
-end)
-
 -- Define the base slash command
 SLASH_BEB1 = "/beb"
 SlashCmdList["BEB"] = function(msg)
@@ -398,3 +399,14 @@ SlashCmdList["BEB"] = function(msg)
         print("/beb disable - Disable the experience bar.")
     end
 end
+
+expBarFrame:SetScript("OnEnter", function(self)
+    UpdateTooltipText()
+    tooltipFrame:ClearAllPoints()
+    tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, 10)
+    tooltipFrame:Show()
+end)
+
+expBarFrame:SetScript("OnLeave", function(self)
+    tooltipFrame:Hide()
+end)
