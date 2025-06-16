@@ -164,12 +164,19 @@ local function UpdateTooltipText()
     local remainingXP = maxXP - currentXP
     local playerLevel = UnitLevel("player") or 0
 
+    -- Calculate rested percent of level
+    local restedPercent = 0
+    if maxXP > 0 then
+        restedPercent = math.floor((restedXP / maxXP) * 100 + 0.5)
+    end
+
     tooltipText:SetText(string.format(
-        "Level: |cff00ff00%d|r\nCurrent: %s / %s\nRested: |cff3399ff+%s|r\nRemaining: |cffa335ee%s|r",
+        "Level: |cff00ff00%d|r\nCurrent: %s / %s\nRested: |cff3399ff+%s|r |cff3399ff(%d%%)|r\nRemaining: |cffa335ee%s|r",
         playerLevel,
         "|cffffff00" .. FormatNumber(currentXP) .. "|r",
         FormatNumber(maxXP),
         FormatNumber(restedXP),
+        restedPercent,
         FormatNumber(remainingXP)
     ))
 

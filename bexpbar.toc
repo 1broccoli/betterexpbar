@@ -2,7 +2,7 @@
 ## Title: |cFF3B9C9CBetter|r Exp Bar 
 ## Notes: A moveable experience bar addon for WoW Classic
 ## Author: Pegga
-## Version: 1.6
+## Version: 1.7
 ## SavedVariablesPerCharacter: bexpbarDB
 
 bexpbar.lua
