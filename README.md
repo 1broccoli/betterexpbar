@@ -8,26 +8,52 @@ BetterExpBar is a lightweight and customizable addon for World of Warcraft Class
 ![image](https://github.com/user-attachments/assets/ab9e82f3-1d44-4e15-80c5-df0d9104d2c1)
 
 
-BetterXPbar– Enhanced Experience Bar for WoW Classic
+BetterXPbar– Enhanced Experience and Reputation Bars for WoW Classic
 
-BetterXPbaris a lightweight and customizable addon for World of Warcraft Classic that enhances the default experience bar with improved visibility, customization options, and added functionality.
+Better Exp & Rep Bars is a comprehensive addon for World of Warcraft Classic that provides advanced customization for both your experience and reputation bars with extensive styling options, detailed tooltips, and professional UI controls.
 
 Features:
 
-✅ Custom Experience Text – Displays your current XP, total XP required, rested XP, and XP percentage directly on the bar.
-✅ Movable & Resizable – Easily drag the experience bar anywhere on your screen and adjust its width, height, and transparency.
-✅ XP Text Toggle – Option to show or hide the XP text overlay for a cleaner UI.
-✅ Persistent Settings – Your preferences for size, position, and visibility are saved and automatically loaded when you log in.
-✅ Right-Click Settings Panel – Quickly access the settings menu by right-clicking the XP bar.
+✅ Unified Bar Management – Manage both experience and reputation bars from a single addon
+✅ Customizable Bar Text – Choose what information displays on each bar (percentage, faction name, standing, or hide text entirely)
+✅ Detailed Tooltips – Hover over bars to see comprehensive information with toggleable options:
+   - Experience bar: Level, Current XP, Rested XP, Remaining XP, Percentage
+   - Reputation bar: Faction Name, Standing, Current Rep, Remaining Rep
+✅ Bar Styling Options – Full customization including:
+   - Independent opacity control for each bar
+   - Adjustable text size (8-24pt)
+   - Bar scale control (0.5x to 2.0x)
+   - Background opacity
+   - Border color picker
+   - Synchronize style toggle to apply settings to both bars
+✅ Movable & Resizable – Drag bars anywhere on screen and resize to your preference
+✅ Professional Config Panel – Access all options via /beb config or right-click on any bar
+✅ Profile Support – Per-character, per-realm, or cross-realm settings via AceDB
+✅ Persistent Settings – All preferences automatically saved and loaded
+✅ Independent Positioning – Each bar saves its own position and size
 
 How to Use:
 
-Drag to Move – Click and drag the experience bar to reposition it.
+Drag to Move – Click and drag either bar to reposition it anywhere on screen.
 
-Right-Click for Settings – Open the settings panel to adjust size, transparency, and XP text visibility.
+Resize – Grab the bottom-right corner handle and drag to resize.
 
-Reset to Default – Use the reset button in the settings panel to restore default positioning and appearance.
+Right-Click for Settings – Open the professional configuration panel by right-clicking on either bar.
 
-XP Display Options – Toggle XP text visibility with the settings menu.
+Customize Everything – Adjust colors, opacity, text display, tooltips, and more through the settings panel.
 
-If you want a cleaner, more informative, and customizable XP bar without unnecessary clutter, BetterXPbaris the perfect solution!
+Toggle Reputation Bar – Use /beb togglerep command or settings panel to show/hide reputation bar.
+
+Reset Positions – Use /beb reset or the "Reset Position" button in settings to restore default positioning.
+
+Slash Commands:
+
+/beb config - Open configuration panel
+/beb reset - Reset bar positions to center
+/beb enable - Enable the addon
+/beb disable - Disable the addon
+/beb togglerep - Toggle reputation bar visibility
+
+Why Use Better Exp & Rep Bars?
+
+If you want maximum control over your XP and reputation tracking with a professional, customizable UI that goes far beyond the default bars, Better Exp & Rep Bars is your perfect solution! The extensive tooltip options, text display choices, and styling controls make it the most flexible bar addon available for WoW Classic.
