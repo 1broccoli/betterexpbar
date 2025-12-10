@@ -1,0 +1,55 @@
+Version 2.0.3 - December 10, 2025
+===============================
+- MAJOR UPDATE: Integrated reputation bar functionality into unified addon
+- New Feature: Reputation bar with full drag, resize, and tooltip support
+- Reputation bar shows faction name, standing, percentage, and colors based on standing
+- Reputation bar has independent positioning and sizing
+- Added /beb togglerep command to show/hide reputation bar
+- Reputation bar can be enabled/disabled in config GUI
+- Reputation bar updates automatically when faction changes
+- Both XP and Rep bars now managed in single addon
+- Renamed addon to "Better Exp & Rep Bars"
+- Enhanced options panel with reputation bar toggle
+- Both bars save positions independently
+
+Version 2.0.2 
+===============================
+- Added comprehensive tooltip customization options
+- New: Toggle tooltips on/off
+- New: Tooltip font size control (8-24pt)
+- New: Tooltip vertical offset adjustment (0-50px)
+- New: Tooltip background color picker (with alpha)
+- New: Tooltip border color picker (with alpha)
+- Added per-bar text visibility toggle
+- Bar style improvements with gloss and border options
+- All tooltip changes apply in real-time
+- Improved tooltip positioning with configurable offset
+
+Version 2.0.1 
+===============================
+- Added comprehensive bar customization options
+- New: Bar Scale slider (0.5x to 2.0x)
+- New: Background Opacity control
+- New: Border Color picker
+- New: Individual bar opacity controls (XP and Rep bars)
+- New: Individual text size sliders for each bar (8-24pt)
+- New: "Synchronize Style" toggle to apply same styling to both bars
+- Right-click on bars to open config panel
+- Enhanced options panel with grouped settings
+- Better organization of settings by category
+- All styling changes apply in real-time
+
+Version 2.0 
+===============================
+- Major refactor: Integrated Ace3 library framework
+- Added AceAddon-3.0 for proper addon structure and lifecycle management
+- Added AceDB-3.0 for profile support (per-character, per-realm, cross-realm)
+- Added AceConfig-3.0 for professional GUI options panel
+- Added AceEvent-3.0 for efficient event handling
+- Added AceConsole-3.0 for improved slash command management
+- New feature: Color customization via GUI (experience and rested bar colors)
+- New feature: Configuration GUI accessible via /beb config or Interface Options
+- Improved code organization with object-oriented structure
+- Better saved variables management with default fallbacks
+- Changed from SavedVariablesPerCharacter to SavedVariables for profile flexibility
+- Enhanced error handling and nil-safety checks
