@@ -676,57 +676,100 @@ end
 function BetterExpBar:UpdateRepBar()
     if not repBarInner or not repText then return end
     
-    local name, standing, minRep, maxRep, currentRep, factionID = GetWatchedFactionInfo()
-    if name then
-        local maxValue = maxRep - minRep
-        local currentValue = currentRep - minRep
-        if maxValue <= 0 then maxValue = 1 end
-        
-        repBarInner:SetMinMaxValues(0, maxValue)
-        repBarInner:SetValue(currentValue)
-        
-        -- Set color based on standing
-        local color = FACTION_BAR_COLORS and FACTION_BAR_COLORS[standing]
-        if color then
-            repBarInner:SetStatusBarColor(color.r, color.g, color.b, 1)
-        else
-            repBarInner:SetStatusBarColor(1, 1, 1, 1)
-        end
-        
-        -- Update text based on user preference
-        local percent = (maxValue > 0) and (currentValue / maxValue) * 100 or 0
-        local standingText = self:GetStandingText(standing)
-        
-        local color = "|cffffffff"
-        if FACTION_BAR_COLORS and FACTION_BAR_COLORS[standing] then
-            local c = FACTION_BAR_COLORS[standing]
-            color = string.format("|cFF%02X%02X%02X", c.r*255, c.g*255, c.b*255)
-        end
-        
-        local percentColor = "|cff33ffcc"
-        local factionColor = "|cffffffff"
-        
-        local textFormat = self.db.profile.repBar.textFormat or "full"
-        local displayText = ""
-        if textFormat == "full" then
-            displayText = string.format("%s%s|r: %s%d%%%s (%s%s|r)", factionColor, name, percentColor, percent, "|r", color, standingText)
-        elseif textFormat == "percentage" then
-            displayText = string.format("%d%%", percent)
-        elseif textFormat == "name" then
-            displayText = string.format("%s%s|r", factionColor, name)
-        elseif textFormat == "none" then
-            displayText = ""
-        else
-            displayText = string.format("%s%s|r: %s%d%%%s (%s%s|r)", factionColor, name, percentColor, percent, "|r", color, standingText)
-        end
-        
-        repText:SetText(displayText)
+    local name, standing, minRep, maxRep, currentRep, factionID
+    
+    -- Try GetWatchedFactionInfo if available
+    if GetWatchedFactionInfo then
+        name, standing, minRep, maxRep, currentRep, factionID = GetWatchedFactionInfo()
     else
+        -- Fallback: look for watched faction in the UI
+        if ReputationFrame and ReputationFrame.activeCategory then
+            local scrollFrame = ReputationFrame.ScrollFrame
+            if scrollFrame and scrollFrame.ScrollChild then
+                for i = 1, scrollFrame.ScrollChild:GetNumChildren() do
+                    local child = select(i, scrollFrame.ScrollChild:GetChildren())
+                    if child and child.factionIndex then
+                        -- GetFactionInfo returns: name, description, standing, min, max, value, atWar, canToggle, isHeader, collapsed, hasRep, isWatched
+                        local n, desc, s, min, max, val = GetFactionInfo(child.factionIndex)
+                        if n and child.HighlightTexture and child.HighlightTexture:IsShown() then
+                            name, standing, minRep, maxRep, currentRep = n, s, min, max, val
+                            factionID = child.factionIndex
+                            break
+                        end
+                    end
+                end
+            end
+        end
+        
+        -- Last resort: find the highest reputation faction
+        if not name and GetNumFactions then
+            local bestIndex, bestRep = nil, -42999
+            for i = 1, GetNumFactions() do
+                local n, desc, s, min, max, val = GetFactionInfo(i)
+                if n and val then
+                    local repVal = val - min
+                    if repVal > bestRep then
+                        bestRep = repVal
+                        bestIndex = i
+                        name, standing, minRep, maxRep, currentRep, factionID = n, s, min, max, val, i
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Ensure we have valid data before proceeding
+    if not name or not currentRep or not minRep or not maxRep then
         repText:SetText("No Faction Tracked")
         repBarInner:SetStatusBarColor(0, 0, 0, 0)
         repBarInner:SetMinMaxValues(0, 1)
         repBarInner:SetValue(0)
+        return
     end
+    
+    local maxValue = maxRep - minRep
+    local currentValue = currentRep - minRep
+    if maxValue <= 0 then maxValue = 1 end
+    
+    repBarInner:SetMinMaxValues(0, maxValue)
+    repBarInner:SetValue(currentValue)
+    
+    -- Set color based on standing
+    local color = FACTION_BAR_COLORS and FACTION_BAR_COLORS[standing]
+    if color then
+        repBarInner:SetStatusBarColor(color.r, color.g, color.b, 1)
+    else
+        repBarInner:SetStatusBarColor(1, 1, 1, 1)
+    end
+    
+    -- Update text based on user preference
+    local percent = (maxValue > 0) and (currentValue / maxValue) * 100 or 0
+    local standingText = self:GetStandingText(standing)
+    
+    local color = "|cffffffff"
+    if FACTION_BAR_COLORS and FACTION_BAR_COLORS[standing] then
+        local c = FACTION_BAR_COLORS[standing]
+        color = string.format("|cFF%02X%02X%02X", c.r*255, c.g*255, c.b*255)
+    end
+    
+    local percentColor = "|cff33ffcc"
+    local factionColor = "|cffffffff"
+    
+    local textFormat = self.db.profile.repBar.textFormat or "full"
+    local displayText = ""
+    if textFormat == "full" then
+        displayText = string.format("%s%s|r: %s%d%%%s (%s%s|r)", factionColor, name, percentColor, percent, "|r", color, standingText)
+    elseif textFormat == "percentage" then
+        displayText = string.format("%d%%", percent)
+    elseif textFormat == "name" then
+        displayText = string.format("%s%s|r", factionColor, name)
+    elseif textFormat == "none" then
+        displayText = ""
+    else
+        displayText = string.format("%s%s|r: %s%d%%%s (%s%s|r)", factionColor, name, percentColor, percent, "|r", color, standingText)
+    end
+    
+    repText:SetText(displayText)
     
     -- Update tooltip if visible
     if repTooltipFrame and repTooltipFrame:IsShown() then
@@ -751,7 +794,53 @@ end
 function BetterExpBar:UpdateRepTooltip()
     if not repTooltipText then return end
     
-    local name, standing, minRep, maxRep, currentRep, factionID = GetWatchedFactionInfo()
+    local name, standing, minRep, maxRep, currentRep, factionID
+    
+    -- Try GetWatchedFactionInfo if available
+    if GetWatchedFactionInfo then
+        name, standing, minRep, maxRep, currentRep, factionID = GetWatchedFactionInfo()
+    else
+        -- Fallback: look for watched faction in the UI
+        if ReputationFrame and ReputationFrame.activeCategory then
+            local scrollFrame = ReputationFrame.ScrollFrame
+            if scrollFrame and scrollFrame.ScrollChild then
+                for i = 1, scrollFrame.ScrollChild:GetNumChildren() do
+                    local child = select(i, scrollFrame.ScrollChild:GetChildren())
+                    if child and child.factionIndex then
+                        -- GetFactionInfo returns: name, description, standing, min, max, value, atWar, canToggle, isHeader, collapsed, hasRep, isWatched
+                        local n, desc, s, min, max, val = GetFactionInfo(child.factionIndex)
+                        if n and child.HighlightTexture and child.HighlightTexture:IsShown() then
+                            name, standing, minRep, maxRep, currentRep = n, s, min, max, val
+                            factionID = child.factionIndex
+                            break
+                        end
+                    end
+                end
+            end
+        end
+        
+        -- Last resort: find the highest reputation faction
+        if not name and GetNumFactions then
+            local bestIndex, bestRep = nil, -42999
+            for i = 1, GetNumFactions() do
+                local n, desc, s, min, max, val = GetFactionInfo(i)
+                if n and val then
+                    local repVal = val - min
+                    if repVal > bestRep then
+                        bestRep = repVal
+                        bestIndex = i
+                        name, standing, minRep, maxRep, currentRep, factionID = n, s, min, max, val, i
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Ensure we have valid data before proceeding
+    if not name or not currentRep or not minRep or not maxRep then
+        return
+    end
+    
     if name then
         local currentValue = currentRep - minRep
         local maxValue = maxRep - minRep

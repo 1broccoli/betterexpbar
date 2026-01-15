@@ -1,14 +1,54 @@
-Version 1.2 - January 15, 2026
-- Fixed nil value errors for 'repitems' field by initializing tables at addon startup
-- Added initialization for Repute.repitems, Repute.classbooks, and Repute.repitemsets
-- Added Repute.factionStandingMax table with proper reputation values
-- Removed LEARNED_SPELL_IN_TAB event registration (doesn't exist in TBC Anniversary)
-- Added safety checks before accessing repitems in all event handlers and tooltip hooks
-- Fixes compatibility issues with TBC Anniversary (20th Anniversary Edition)
+Version 2.9.2 - January 15, 2026
+- Fixed GetWatchedFactionInfo() API compatibility issues with TBC Classic
+- Updated .toc file Interface version to 20504 (TBC Classic)
+- Implemented fallback reputation bar system using GetFactionInfo() for better compatibility
+- Fixed nil value errors in reputation bar calculations
+- Reputation bar now properly displays tracked faction information
+- Added proper null checks and error handling for reputation data
+- Verified addon works correctly on TBC Classic servers
 
-Version 1.1    
-    - Added Ace Libraries to improve code
-    - Added Honor and HK support to clean up chat
-    - Optional using SPY to show player's names printed for HK to be the color of their class but not required for addon to work.
-    - Minimap Icon with only a test button right now but will implement features in the future.
+lightweight tag 341c76b6cff52179e14baba3b55ce836624b9b12 2.9
+Author:	GitHub <noreply@github.com>
+Date:	Thu Jan 15 10:12:57 2026 -0700
+
+commit 341c76b6cff52179e14baba3b55ce836624b9b12
+Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
+Date:   Thu Jan 15 10:12:57 2026 -0700
+
+    Add files via upload
+    
+    Version 2.9 - January 15, 2026
+    - Added TBC Classic interface tag (Interface-BCC: 20504) while keeping Classic Era (11502)
+    - Verified addon works on both Classic Era and TBC Classic with shared codebase
+    - No code changes required; ensured libraries are loaded in both environments
+    
+    Version 2.8 - January 15, 2026
+    - Added minimap button using LibDBIcon
+    - Added option to show/hide minimap button in settings
+    - Added option to lock minimap button position
+    - Minimap button supports left-click to open options, right-click to reset position
+    - Added /beb minimap command to toggle minimap button visibility
+    - Updated SavedVariables to BetterExpBarDB for better compatibility
+    - Minimap button position is saved per profile
+    - Now works with both the new Ace3-based code and classic versions
+    
+    Version 1.8 - January 15, 2026
+    - Updated for TBC Classic compatibility
+    - Interface version updated to 20504
+    - Now compatible with both TBC Classic and Classic WoW
+    - No code changes required - fully backward compatible
+    
+    
+    Date:   Mon Jun 16 02:01:29 2025 -0700
+    
+        Add files via upload
+    
+        - Added % amount of rested exp to tooltip
+        - New Customizable bar layout in next update!
+
+commit 8cab5f02075b455f1a73adaa36f74d336a737004
+Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
+Date:   Wed Dec 10 04:22:39 2025 -0700
+
+    Add files via upload
 

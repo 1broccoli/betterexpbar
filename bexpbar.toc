@@ -1,8 +1,8 @@
-## Interface: 11400
+## Interface: 20504
 ## Title: |cFFFFC0CBBetter|r Experience Bars
-## Notes: Moveable experience and reputation bars for WoW Classic
+## Notes: Moveable experience and reputation bars for WoW TBC
 ## Author: Pegga
-## Version: 2.0.3
+## Version: 2.9.2
 ## SavedVariables: BetterExpBarDB
 
 Libs\LibStub\LibStub.lua
