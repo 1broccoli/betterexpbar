@@ -1,18 +1,14 @@
-lightweight tag 7cac57ec361966e7577e73801ac4618b939dfe0c v2.0.4
-Author:	GitHub <noreply@github.com>
-Date:	Wed Dec 10 04:14:27 2025 -0700
+Version 1.2 - January 15, 2026
+- Fixed nil value errors for 'repitems' field by initializing tables at addon startup
+- Added initialization for Repute.repitems, Repute.classbooks, and Repute.repitemsets
+- Added Repute.factionStandingMax table with proper reputation values
+- Removed LEARNED_SPELL_IN_TAB event registration (doesn't exist in TBC Anniversary)
+- Added safety checks before accessing repitems in all event handlers and tooltip hooks
+- Fixes compatibility issues with TBC Anniversary (20th Anniversary Edition)
 
-commit 7cac57ec361966e7577e73801ac4618b939dfe0c
-Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
-Date:   Wed Dec 10 04:14:27 2025 -0700
-
-    Add files via upload
-
-commit 008c1744310e3de026669836ee67916b14bed244
-Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
-Date:   Tue Jun 17 00:13:30 2025 -0700
-
-    Add files via upload
-    
-    retail version
+Version 1.1    
+    - Added Ace Libraries to improve code
+    - Added Honor and HK support to clean up chat
+    - Optional using SPY to show player's names printed for HK to be the color of their class but not required for addon to work.
+    - Minimap Icon with only a test button right now but will implement features in the future.
 

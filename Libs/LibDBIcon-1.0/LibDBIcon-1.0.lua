@@ -3,8 +3,9 @@
 --
 -- Allows addons to easily create a lightweight minimap icon as an alternative to heavier LDB displays.
 --
+
 local DBICON10 = "LibDBIcon-1.0"
-local DBICON10_MINOR = 44 -- Bump on changes
+local DBICON10_MINOR = 43 -- Bump on changes
 if not LibStub then error(DBICON10 .. " requires LibStub.") end
 local ldb = LibStub("LibDataBroker-1.1", true)
 if not ldb then error(DBICON10 .. " requires LibDataBroker-1.1.") end
@@ -17,7 +18,35 @@ lib.callbacks = lib.callbacks or LibStub("CallbackHandler-1.0"):New(lib)
 lib.notCreated = lib.notCreated or {}
 lib.radius = lib.radius or 5
 lib.tooltip = lib.tooltip or CreateFrame("GameTooltip", "LibDBIconTooltip", UIParent, "GameTooltipTemplate")
-local next, pairs, type = next, pairs, type
+local next, Minimap = next, Minimap
+local isDraggingButton = false
+
+function lib:IconCallback(event, name, key, value)
+	if lib.objects[name] then
+		if key == "icon" then
+			lib.objects[name].icon:SetTexture(value)
+		elseif key == "iconCoords" then
+			lib.objects[name].icon:UpdateCoord()
+		elseif key == "iconR" then
+			local _, g, b = lib.objects[name].icon:GetVertexColor()
+			lib.objects[name].icon:SetVertexColor(value, g, b)
+		elseif key == "iconG" then
+			local r, _, b = lib.objects[name].icon:GetVertexColor()
+			lib.objects[name].icon:SetVertexColor(r, value, b)
+		elseif key == "iconB" then
+			local r, g = lib.objects[name].icon:GetVertexColor()
+			lib.objects[name].icon:SetVertexColor(r, g, value)
+		end
+	end
+end
+if not lib.callbackRegistered then
+	ldb.RegisterCallback(lib, "LibDataBroker_AttributeChanged__icon", "IconCallback")
+	ldb.RegisterCallback(lib, "LibDataBroker_AttributeChanged__iconCoords", "IconCallback")
+	ldb.RegisterCallback(lib, "LibDataBroker_AttributeChanged__iconR", "IconCallback")
+	ldb.RegisterCallback(lib, "LibDataBroker_AttributeChanged__iconG", "IconCallback")
+	ldb.RegisterCallback(lib, "LibDataBroker_AttributeChanged__iconB", "IconCallback")
+	lib.callbackRegistered = true
+end
 
 local function getAnchors(frame)
 	local x, y = frame:GetCenter()
@@ -27,58 +56,91 @@ local function getAnchors(frame)
 	return vhalf..hhalf, frame, (vhalf == "TOP" and "BOTTOM" or "TOP")..hhalf
 end
 
-local function updatePosition(button, position)
-	if not button.dataObject then return end
-	local minimapShape = GetMinimapShape and GetMinimapShape() or "ROUND"
-	local isRound = true
-	if minimapShape == "SQUARE" then isRound = false end
-	if minimapShape == "CORNER-TOPRIGHT" then isRound = false end
-	if minimapShape == "CORNER-TOPLEFT" then isRound = false end
-	if minimapShape == "CORNER-BOTTOMRIGHT" then isRound = false end
-	if minimapShape == "CORNER-BOTTOMLEFT" then isRound = false end
-	if minimapShape == "TRICORNER-TOPRIGHT" then isRound = false end
-	if minimapShape == "TRICORNER-TOPLEFT" then isRound = false end
-	if minimapShape == "TRICORNER-BOTTOMRIGHT" then isRound = false end
-	if minimapShape == "TRICORNER-BOTTOMLEFT" then isRound = false end
-	
-	local angle = math.rad(position or 225)
-	local x, y
-	local cos = math.cos(angle)
-	local sin = math.sin(angle)
-	local round = isRound
-	if round then
-		x = cos * lib.radius
-		y = sin * lib.radius
-	else
-		x = 110 * cos
-		y = 110 * sin
-		if cos < 0 then x = x - 10 end
-		if sin < 0 then y = y - 10 end
-	end
-	button:SetPoint("CENTER", Minimap, "CENTER", x, y)
-end
-
-local function onClick(self, b)
-	if self.dataObject.OnClick then
-		self.dataObject.OnClick(self, b)
-	end
-end
-
 local function onEnter(self)
-	if self.dataObject.OnTooltipShow then
+	if isDraggingButton then return end
+
+	for _, button in next, lib.objects do
+		if button.showOnMouseover then
+			button.fadeOut:Stop()
+			button:SetAlpha(1)
+		end
+	end
+
+	local obj = self.dataObject
+	if obj.OnTooltipShow then
 		lib.tooltip:SetOwner(self, "ANCHOR_NONE")
 		lib.tooltip:SetPoint(getAnchors(self))
-		self.dataObject.OnTooltipShow(lib.tooltip)
+		obj.OnTooltipShow(lib.tooltip)
 		lib.tooltip:Show()
-	elseif self.dataObject.OnEnter then
-		self.dataObject.OnEnter(self)
+	elseif obj.OnEnter then
+		obj.OnEnter(self)
 	end
 end
 
 local function onLeave(self)
 	lib.tooltip:Hide()
-	if self.dataObject.OnLeave then
-		self.dataObject.OnLeave(self)
+
+	if not isDraggingButton then
+		for _, button in next, lib.objects do
+			if button.showOnMouseover then
+				button.fadeOut:Play()
+			end
+		end
+	end
+
+	local obj = self.dataObject
+	if obj.OnLeave then
+		obj.OnLeave(self)
+	end
+end
+
+--------------------------------------------------------------------------------
+
+local onDragStart, updatePosition
+
+do
+	local minimapShapes = {
+		["ROUND"] = {true, true, true, true},
+		["SQUARE"] = {false, false, false, false},
+		["CORNER-TOPLEFT"] = {false, false, false, true},
+		["CORNER-TOPRIGHT"] = {false, false, true, false},
+		["CORNER-BOTTOMLEFT"] = {false, true, false, false},
+		["CORNER-BOTTOMRIGHT"] = {true, false, false, false},
+		["SIDE-LEFT"] = {false, true, false, true},
+		["SIDE-RIGHT"] = {true, false, true, false},
+		["SIDE-TOP"] = {false, false, true, true},
+		["SIDE-BOTTOM"] = {true, true, false, false},
+		["TRICORNER-TOPLEFT"] = {false, true, true, true},
+		["TRICORNER-TOPRIGHT"] = {true, false, true, true},
+		["TRICORNER-BOTTOMLEFT"] = {true, true, false, true},
+		["TRICORNER-BOTTOMRIGHT"] = {true, true, true, false},
+	}
+
+	local rad, cos, sin, sqrt, max, min = math.rad, math.cos, math.sin, math.sqrt, math.max, math.min
+	function updatePosition(button, position)
+		local angle = rad(position or 225)
+		local x, y, q = cos(angle), sin(angle), 1
+		if x < 0 then q = q + 1 end
+		if y > 0 then q = q + 2 end
+		local minimapShape = GetMinimapShape and GetMinimapShape() or "ROUND"
+		local quadTable = minimapShapes[minimapShape]
+		local w = (Minimap:GetWidth() / 2) + lib.radius
+		local h = (Minimap:GetHeight() / 2) + lib.radius
+		if quadTable[q] then
+			x, y = x*w, y*h
+		else
+			local diagRadiusW = sqrt(2*(w)^2)-10
+			local diagRadiusH = sqrt(2*(h)^2)-10
+			x = max(-w, min(x*diagRadiusW, w))
+			y = max(-h, min(y*diagRadiusH, h))
+		end
+		button:SetPoint("CENTER", Minimap, "CENTER", x, y)
+	end
+end
+
+local function onClick(self, b)
+	if self.dataObject.OnClick then
+		self.dataObject.OnClick(self, b)
 	end
 end
 
@@ -92,21 +154,38 @@ local function onMouseUp(self)
 	self.icon:UpdateCoord()
 end
 
-local function onDragStart(self)
-	self:LockHighlight()
-	self.isMouseDown = true
-	self.icon:UpdateCoord()
-	self:SetScript("OnUpdate", function(self)
+do
+	local deg, atan2 = math.deg, math.atan2
+	local function onUpdate(self)
 		local mx, my = Minimap:GetCenter()
 		local px, py = GetCursorPosition()
 		local scale = Minimap:GetEffectiveScale()
 		px, py = px / scale, py / scale
 		local pos = 225
-		if px and py and mx and my then
-			pos = math.deg(math.atan2(py - my, px - mx)) % 360
+		if self.db then
+			pos = deg(atan2(py - my, px - mx)) % 360
+			self.db.minimapPos = pos
+		else
+			pos = deg(atan2(py - my, px - mx)) % 360
+			self.minimapPos = pos
 		end
-		lib:SetButtonToPosition(self, pos)
-	end)
+		updatePosition(self, pos)
+	end
+
+	function onDragStart(self)
+		self:LockHighlight()
+		self.isMouseDown = true
+		self.icon:UpdateCoord()
+		self:SetScript("OnUpdate", onUpdate)
+		isDraggingButton = true
+		lib.tooltip:Hide()
+		for _, button in next, lib.objects do
+			if button.showOnMouseover then
+				button.fadeOut:Stop()
+				button:SetAlpha(1)
+			end
+		end
+	end
 end
 
 local function onDragStop(self)
@@ -114,6 +193,23 @@ local function onDragStop(self)
 	self.isMouseDown = false
 	self.icon:UpdateCoord()
 	self:UnlockHighlight()
+	isDraggingButton = false
+	for _, button in next, lib.objects do
+		if button.showOnMouseover then
+			button.fadeOut:Play()
+		end
+	end
+end
+
+local defaultCoords = {0, 1, 0, 1}
+local function updateCoord(self)
+	local coords = self:GetParent().dataObject.iconCoords or defaultCoords
+	local deltaX, deltaY = 0, 0
+	if not self:GetParent().isMouseDown then
+		deltaX = (coords[2] - coords[1]) * 0.05
+		deltaY = (coords[4] - coords[3]) * 0.05
+	end
+	self:SetTexCoord(coords[1] + deltaX, coords[2] - deltaX, coords[3] + deltaY, coords[4] - deltaY)
 end
 
 local function createButton(name, object, db)
@@ -121,114 +217,141 @@ local function createButton(name, object, db)
 	button.dataObject = object
 	button.db = db
 	button:SetFrameStrata("MEDIUM")
-	button:SetSize(31, 31)
+	button:SetSize(24, 20)  -- Adjusted size to make it slightly wider
 	button:SetFrameLevel(8)
 	button:RegisterForClicks("anyUp")
 	button:RegisterForDrag("LeftButton")
-	button:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
-	
+	button:SetHighlightTexture(136477) --"Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
 	local overlay = button:CreateTexture(nil, "OVERLAY")
 	overlay:SetSize(53, 53)
-	overlay:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+	overlay:SetTexture(136430) --"Interface\\Minimap\\MiniMap-TrackingBorder"
 	overlay:SetPoint("TOPLEFT")
-	
 	local background = button:CreateTexture(nil, "BACKGROUND")
 	background:SetSize(20, 20)
-	background:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+	background:SetTexture(136467) --"Interface\\Minimap\\UI-Minimap-Background"
 	background:SetPoint("TOPLEFT", 7, -5)
-	
 	local icon = button:CreateTexture(nil, "ARTWORK")
 	icon:SetSize(17, 17)
-	icon:SetTexture(object.icon)
+	icon:SetTexture("Interface\\AddOns\\PlayerTitleNames\\mmicon.png")  -- Updated icon path
 	icon:SetPoint("TOPLEFT", 7, -6)
 	button.icon = icon
-	
 	button.isMouseDown = false
-	
+
 	local r, g, b = icon:GetVertexColor()
-	icon.UpdateCoord = function(self)
-		local coords = object.iconCoords or {0, 1, 0, 1}
-		if button.isMouseDown then
-			self:SetTexCoord(coords[1] + 0.05, coords[2] - 0.05, coords[3] + 0.05, coords[4] - 0.05)
-		else
-			self:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
-		end
-		self:SetVertexColor(r, g, b)
-	end
-	
+	icon:SetVertexColor(object.iconR or r, object.iconG or g, object.iconB or b)
+
+	icon.UpdateCoord = updateCoord
 	icon:UpdateCoord()
-	
+
 	button:SetScript("OnEnter", onEnter)
 	button:SetScript("OnLeave", onLeave)
 	button:SetScript("OnClick", onClick)
+	if not db or not db.lock then
+		button:SetScript("OnDragStart", onDragStart)
+		button:SetScript("OnDragStop", onDragStop)
+	end
 	button:SetScript("OnMouseDown", onMouseDown)
 	button:SetScript("OnMouseUp", onMouseUp)
-	button:SetScript("OnDragStart", onDragStart)
-	button:SetScript("OnDragStop", onDragStop)
-	
+
+	button.fadeOut = button:CreateAnimationGroup()
+	local animOut = button.fadeOut:CreateAnimation("Alpha")
+	animOut:SetOrder(1)
+	animOut:SetDuration(0.2)
+	animOut:SetFromAlpha(1)
+	animOut:SetToAlpha(0)
+	animOut:SetStartDelay(1)
+	button.fadeOut:SetToFinalAlpha(true)
+
 	lib.objects[name] = button
-	
-	if lib.callbacks then
-		lib.callbacks:Fire("LibDBIcon_IconCreated", button, name)
+
+	if lib.loggedIn then
+		updatePosition(button, db and db.minimapPos)
+		if not db or not db.hide then
+			button:Show()
+		else
+			button:Hide()
+		end
 	end
+	lib.callbacks:Fire("LibDBIcon_IconCreated", button, name) -- Fire 'Icon Created' callback
+end
+
+-- We could use a metatable.__index on lib.objects, but then we'd create
+-- the icons when checking things like :IsRegistered, which is not necessary.
+local function check(name)
+	if lib.notCreated[name] then
+		createButton(name, lib.notCreated[name][1], lib.notCreated[name][2])
+		lib.notCreated[name] = nil
+	end
+end
+
+-- Wait a bit with the initial positioning to let any GetMinimapShape addons
+-- load up.
+if not lib.loggedIn then
+	local f = CreateFrame("Frame")
+	f:SetScript("OnEvent", function(f)
+		for _, button in next, lib.objects do
+			updatePosition(button, button.db and button.db.minimapPos)
+			if not button.db or not button.db.hide then
+				button:Show()
+			else
+				button:Hide()
+			end
+		end
+		lib.loggedIn = true
+		f:SetScript("OnEvent", nil)
+	end)
+	f:RegisterEvent("PLAYER_LOGIN")
+end
+
+local function getDatabase(name)
+	return lib.notCreated[name] and lib.notCreated[name][2] or lib.objects[name].db
 end
 
 function lib:Register(name, object, db)
 	if not object.icon then error("Can't register LDB objects without icons set!") end
-	if lib.objects[name] or lib.notCreated[name] then error("Already registered: "..name) end
+	if lib.objects[name] or lib.notCreated[name] then error(DBICON10.. ": Object '".. name .."' is already registered.") end
 	if not db or not db.hide then
 		createButton(name, object, db)
-		updatePosition(lib.objects[name], db and db.minimapPos or 225)
-		if not db or not db.hide then
-			lib.objects[name]:Show()
-		else
-			lib.objects[name]:Hide()
-		end
 	else
 		lib.notCreated[name] = {object, db}
 	end
 end
 
 function lib:Lock(name)
-	local button = lib.objects[name]
-	if button then
-		button:SetScript("OnDragStart", nil)
-		button:SetScript("OnDragStop", nil)
-		if button.db then
-			button.db.lock = true
-		end
+	if not lib:IsRegistered(name) then return end
+	if lib.objects[name] then
+		lib.objects[name]:SetScript("OnDragStart", nil)
+		lib.objects[name]:SetScript("OnDragStop", nil)
+	end
+	local db = getDatabase(name)
+	if db then
+		db.lock = true
 	end
 end
 
 function lib:Unlock(name)
-	local button = lib.objects[name]
-	if button then
-		button:SetScript("OnDragStart", onDragStart)
-		button:SetScript("OnDragStop", onDragStop)
-		if button.db then
-			button.db.lock = nil
-		end
+	if not lib:IsRegistered(name) then return end
+	if lib.objects[name] then
+		lib.objects[name]:SetScript("OnDragStart", onDragStart)
+		lib.objects[name]:SetScript("OnDragStop", onDragStop)
+	end
+	local db = getDatabase(name)
+	if db then
+		db.lock = nil
 	end
 end
 
 function lib:Hide(name)
-	local button = lib.objects[name]
-	if button then
-		button:Hide()
-	end
+	if not lib.objects[name] then return end
+	lib.objects[name]:Hide()
 end
 
 function lib:Show(name)
+	check(name)
 	local button = lib.objects[name]
 	if button then
 		button:Show()
-		updatePosition(button, button.db and button.db.minimapPos or 225)
-	elseif lib.notCreated[name] then
-		local object, db = unpack(lib.notCreated[name])
-		createButton(name, object, db)
-		updatePosition(lib.objects[name], db and db.minimapPos or 225)
-		lib.notCreated[name] = nil
-		lib.objects[name]:Show()
+		updatePosition(button, button.db and button.db.minimapPos or button.minimapPos)
 	end
 end
 
@@ -237,20 +360,23 @@ function lib:IsRegistered(name)
 end
 
 function lib:Refresh(name, db)
+	check(name)
 	local button = lib.objects[name]
-	if button then
+	if db then
 		button.db = db
-		updatePosition(button, db and db.minimapPos or 225)
-		if db and db.hide then
-			button:Hide()
-		elseif not db or not db.hide then
-			button:Show()
-		end
-		if db and db.lock then
-			lib:Lock(name)
-		else
-			lib:Unlock(name)
-		end
+	end
+	updatePosition(button, button.db and button.db.minimapPos or button.minimapPos)
+	if not button.db or not button.db.hide then
+		button:Show()
+	else
+		button:Hide()
+	end
+	if not button.db or not button.db.lock then
+		button:SetScript("OnDragStart", onDragStart)
+		button:SetScript("OnDragStop", onDragStop)
+	else
+		button:SetScript("OnDragStart", nil)
+		button:SetScript("OnDragStop", nil)
 	end
 end
 
@@ -258,31 +384,87 @@ function lib:GetMinimapButton(name)
 	return lib.objects[name]
 end
 
-function lib:SetButtonToPosition(button, position)
-	if button.db then
-		button.db.minimapPos = position
-		updatePosition(button, position)
+do
+	local function OnMinimapEnter()
+		if isDraggingButton then return end
+		for _, button in next, lib.objects do
+			if button.showOnMouseover then
+				button.fadeOut:Stop()
+				button:SetAlpha(1)
+			end
+		end
 	end
-end
+	local function OnMinimapLeave()
+		if isDraggingButton then return end
+		for _, button in next, lib.objects do
+			if button.showOnMouseover then
+				button.fadeOut:Play()
+			end
+		end
+	end
+	Minimap:HookScript("OnEnter", OnMinimapEnter)
+	Minimap:HookScript("OnLeave", OnMinimapLeave)
 
-function lib:SetButtonRadius(radius)
-	lib.radius = radius
-	for _, button in pairs(lib.objects) do
-		updatePosition(button, button.db and button.db.minimapPos or 225)
+	function lib:ShowOnEnter(name, value)
+		local button = lib.objects[name]
+		if button then
+			if value then
+				button.showOnMouseover = true
+				button.fadeOut:Stop()
+				button:SetAlpha(0)
+			else
+				button.showOnMouseover = false
+				button.fadeOut:Stop()
+				button:SetAlpha(1)
+			end
+		end
 	end
 end
 
 function lib:GetButtonList()
-	local list = {}
-	for name in pairs(lib.objects) do
-		list[name] = true
+	local t = {}
+	for name in next, lib.objects do
+		t[#t+1] = name
 	end
-	return list
+	return t
 end
 
-function lib:SetButtonSize(name, size)
-	local button = lib.objects[name]
-	if button then
-		button:SetSize(size, size)
+function lib:SetButtonRadius(radius)
+	if type(radius) == "number" then
+		lib.radius = radius
+		for _, button in next, lib.objects do
+			updatePosition(button, button.db and button.db.minimapPos or button.minimapPos)
+		end
 	end
 end
+
+function lib:SetButtonToPosition(button, position)
+	updatePosition(lib.objects[button] or button, position)
+end
+
+-- Upgrade!
+for name, button in next, lib.objects do
+	local db = getDatabase(name)
+	if not db or not db.lock then
+		button:SetScript("OnDragStart", onDragStart)
+		button:SetScript("OnDragStop", onDragStop)
+	end
+	button:SetScript("OnEnter", onEnter)
+	button:SetScript("OnLeave", onLeave)
+	button:SetScript("OnClick", onClick)
+	button:SetScript("OnMouseDown", onMouseDown)
+	button:SetScript("OnMouseUp", onMouseUp)
+	button:SetScript("OnUpdate", onUpdate)
+
+	if not button.fadeOut then -- Upgrade to 39
+		button.fadeOut = button:CreateAnimationGroup()
+		local animOut = button.fadeOut:CreateAnimation("Alpha")
+		animOut:SetOrder(1)
+		animOut:SetDuration(0.2)
+		animOut:SetFromAlpha(1)
+		animOut:SetToAlpha(0)
+		animOut:SetStartDelay(1)
+		button.fadeOut:SetToFinalAlpha(true)
+	end
+end
+lib:SetButtonRadius(lib.radius) -- Upgrade to 40
