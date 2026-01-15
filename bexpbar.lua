@@ -3,12 +3,19 @@ local BetterExpBar = LibStub("AceAddon-3.0"):NewAddon("BetterExpBar", "AceConsol
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceDB = LibStub("AceDB-3.0")
+local LDB = LibStub("LibDataBroker-1.1", true)
+local LDBIcon = LibStub("LibDBIcon-1.0", true)
 
 -- Default settings
 local defaults = {
     profile = {
         enabled = true,
         repBarEnabled = true,
+        minimap = {
+            hide = false,
+            minimapPos = 225,
+            lock = false,
+        },
         barStyle = {
             backdropOpacity = 0.5,
             borderColor = { r = 1, g = 1, b = 1, a = 1 },
@@ -95,6 +102,38 @@ function BetterExpBar:OnInitialize()
     self:RegisterChatCommand("beb", "SlashCommand")
     self:RegisterChatCommand("resetexpbar", "ResetPosition")
     self:RegisterChatCommand("enableexpbar", "EnableAddon")
+    
+    -- Create minimap button
+    self:CreateMinimapButton()
+end
+
+function BetterExpBar:CreateMinimapButton()
+    if not LDB or not LDBIcon then return end
+    
+    -- Create LDB data object
+    local minimapButton = LDB:NewDataObject("BetterExpBar", {
+        type = "launcher",
+        text = "Better Exp Bar",
+        icon = "Interface\\Icons\\XP_Icon",
+        OnClick = function(self, button)
+            if button == "LeftButton" then
+                AceConfigDialog:Open("BetterExpBar")
+            elseif button == "RightButton" then
+                BetterExpBar:ResetPosition()
+            end
+        end,
+        OnTooltipShow = function(tooltip)
+            if not tooltip or not tooltip.AddLine then return end
+            tooltip:AddLine("|cFF3B9C9CBetter Exp & Rep Bars|r")
+            tooltip:AddLine(" ")
+            tooltip:AddLine("|cFFFFFFFFLeft-click|r to open options")
+            tooltip:AddLine("|cFFFFFFFFRight-click|r to reset position")
+            tooltip:AddLine("|cFFFFFFFFDrag|r to move minimap icon")
+        end,
+    })
+    
+    -- Register with LibDBIcon
+    LDBIcon:Register("BetterExpBar", minimapButton, self.db.profile.minimap)
 end
 
 function BetterExpBar:OnEnable()
@@ -869,12 +908,26 @@ function BetterExpBar:SlashCommand(input)
         end
     elseif command == "config" or command == "options" then
         AceConfigDialog:Open("BetterExpBar")
+    elseif command == "minimap" then
+        if LDBIcon then
+            self.db.profile.minimap.hide = not self.db.profile.minimap.hide
+            if self.db.profile.minimap.hide then
+                LDBIcon:Hide("BetterExpBar")
+                self:Print("Minimap button hidden")
+            else
+                LDBIcon:Show("BetterExpBar")
+                self:Print("Minimap button shown")
+            end
+        else
+            self:Print("LibDBIcon not available")
+        end
     else
         self:Print("Usage:")
         self:Print("/beb reset - Reset the position of bars")
         self:Print("/beb enable - Enable the addon")
         self:Print("/beb disable - Disable the addon")
         self:Print("/beb togglerep - Toggle reputation bar")
+        self:Print("/beb minimap - Toggle minimap button")
         self:Print("/beb config - Open configuration options")
     end
 end
@@ -914,6 +967,48 @@ function BetterExpBar:RegisterOptions()
                 desc = "Reset all bars to the center of the screen",
                 func = function() self:ResetPosition() end,
                 order = 3,
+            },
+            minimapGroup = {
+                type = "group",
+                name = "Minimap Button",
+                inline = true,
+                order = 3.5,
+                args = {
+                    hide = {
+                        type = "toggle",
+                        name = "Hide Minimap Button",
+                        desc = "Hide the minimap button",
+                        get = function() return self.db.profile.minimap.hide end,
+                        set = function(_, value)
+                            self.db.profile.minimap.hide = value
+                            if LDBIcon then
+                                if value then
+                                    LDBIcon:Hide("BetterExpBar")
+                                else
+                                    LDBIcon:Show("BetterExpBar")
+                                end
+                            end
+                        end,
+                        order = 1,
+                    },
+                    lock = {
+                        type = "toggle",
+                        name = "Lock Minimap Button",
+                        desc = "Prevent the minimap button from being dragged",
+                        get = function() return self.db.profile.minimap.lock end,
+                        set = function(_, value)
+                            self.db.profile.minimap.lock = value
+                            if LDBIcon then
+                                if value then
+                                    LDBIcon:Lock("BetterExpBar")
+                                else
+                                    LDBIcon:Unlock("BetterExpBar")
+                                end
+                            end
+                        end,
+                        order = 2,
+                    },
+                },
             },
             colors = {
                 type = "group",
