@@ -2,7 +2,7 @@
 ## Title: |cFFFFC0CBBetter|r Experience Bars
 ## Notes: Moveable experience and reputation bars for WoW TBC
 ## Author: Pegga
-## Version: 2.9.2
+## Version: 2.9.3
 ## SavedVariables: BetterExpBarDB
 
 Libs\LibStub\LibStub.lua

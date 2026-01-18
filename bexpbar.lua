@@ -137,18 +137,15 @@ function BetterExpBar:CreateMinimapButton()
 end
 
 function BetterExpBar:OnEnable()
-    if not self.db.profile.enabled then
-        self:Print("Better Exp Bar is disabled. Use /beb enable to enable it.")
-        return
-    end
-    
     self:CreateFrames()
     
     -- XP Events
-    self:RegisterEvent("PLAYER_XP_UPDATE", "UpdateExpBar")
-    self:RegisterEvent("PLAYER_LEVEL_UP", "OnLevelUp")
-    self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEnteringWorld")
-    self:RegisterEvent("PLAYER_LOGOUT", "OnLogout")
+    if self.db.profile.enabled then
+        self:RegisterEvent("PLAYER_XP_UPDATE", "UpdateExpBar")
+        self:RegisterEvent("PLAYER_LEVEL_UP", "OnLevelUp")
+        self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEnteringWorld")
+        self:RegisterEvent("PLAYER_LOGOUT", "OnLogout")
+    end
     
     -- Rep Events
     if self.db.profile.repBarEnabled then
@@ -256,188 +253,190 @@ function BetterExpBar:UpdateBarTextSize(barFrame, fontSize)
 end
 
 function BetterExpBar:CreateFrames()
-    -- Create container frame
-    expBarContainer = CreateFrame("Frame", "CustomExpBarContainer", UIParent, "BackdropTemplate")
-    expBarContainer:SetSize(self.db.profile.expBar.width, self.db.profile.expBar.height)
-    expBarContainer:SetPoint("TOP", UIParent, "TOP", 0, -50)
-    expBarContainer:SetBackdropColor(0, 0, 0, 0.8)
-    expBarContainer:SetBackdropBorderColor(0, 0, 0)
-    expBarContainer:SetFrameLevel(1)
-    expBarContainer:EnableMouse(true)
-    expBarContainer:SetMovable(true)
-    expBarContainer:RegisterForDrag("LeftButton")
-    expBarContainer:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    expBarContainer:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        BetterExpBar:SaveFramePosition(self, "expBar")
-    end)
-    expBarContainer:Show()
+    if self.db.profile.enabled then
+        -- Create container frame
+        expBarContainer = CreateFrame("Frame", "CustomExpBarContainer", UIParent, "BackdropTemplate")
+        expBarContainer:SetSize(self.db.profile.expBar.width, self.db.profile.expBar.height)
+        expBarContainer:SetPoint("TOP", UIParent, "TOP", 0, -50)
+        expBarContainer:SetBackdropColor(0, 0, 0, 0.8)
+        expBarContainer:SetBackdropBorderColor(0, 0, 0)
+        expBarContainer:SetFrameLevel(1)
+        expBarContainer:EnableMouse(true)
+        expBarContainer:SetMovable(true)
+        expBarContainer:RegisterForDrag("LeftButton")
+        expBarContainer:SetScript("OnDragStart", function(self) self:StartMoving() end)
+        expBarContainer:SetScript("OnDragStop", function(self)
+            self:StopMovingOrSizing()
+            BetterExpBar:SaveFramePosition(self, "expBar")
+        end)
+        expBarContainer:Show()
 
-    -- Create larger frame
-    largerFrame = CreateFrame("Frame", "LargerExpBarFrame", UIParent, "BackdropTemplate")
-    largerFrame:SetSize(self.db.profile.largerFrame.width, self.db.profile.largerFrame.height)
-    largerFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    largerFrame:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        edgeSize = 16,
-    })
-    largerFrame:SetBackdropColor(0, 0, 0, 0.5)
-    largerFrame:SetBackdropBorderColor(1, 1, 1, 1)
-    largerFrame:SetFrameLevel(1)
-    largerFrame:EnableMouse(true)
-    largerFrame:SetMovable(true)
-    largerFrame:RegisterForDrag("LeftButton")
-    largerFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    largerFrame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        BetterExpBar:SaveFramePosition(self, "largerFrame")
-    end)
-    largerFrame:SetResizable(true)
+        -- Create larger frame
+        largerFrame = CreateFrame("Frame", "LargerExpBarFrame", UIParent, "BackdropTemplate")
+        largerFrame:SetSize(self.db.profile.largerFrame.width, self.db.profile.largerFrame.height)
+        largerFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        largerFrame:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            edgeSize = 16,
+        })
+        largerFrame:SetBackdropColor(0, 0, 0, 0.5)
+        largerFrame:SetBackdropBorderColor(1, 1, 1, 1)
+        largerFrame:SetFrameLevel(1)
+        largerFrame:EnableMouse(true)
+        largerFrame:SetMovable(true)
+        largerFrame:RegisterForDrag("LeftButton")
+        largerFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
+        largerFrame:SetScript("OnDragStop", function(self)
+            self:StopMovingOrSizing()
+            BetterExpBar:SaveFramePosition(self, "largerFrame")
+        end)
+        largerFrame:SetResizable(true)
 
-    -- Add the resize handle
-    resizeHandle = CreateFrame("Frame", nil, largerFrame)
-    resizeHandle:SetSize(8, 8)
-    resizeHandle:SetPoint("BOTTOMRIGHT", largerFrame, "BOTTOMRIGHT", 0, 0)
-    resizeHandle:EnableMouse(true)
-    resizeHandle.texture = resizeHandle:CreateTexture(nil, "OVERLAY")
-    resizeHandle.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
-    resizeHandle.texture:SetSize(8, 8)
-    resizeHandle.texture:SetPoint("CENTER", resizeHandle, "CENTER")
-    resizeHandle:SetScript("OnEnter", function(self)
-        self.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
-    end)
-    resizeHandle:SetScript("OnLeave", function(self)
-        self.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
-    end)
-    resizeHandle:SetScript("OnMouseDown", function(self, button)
-        if button == "LeftButton" then
-            largerFrame:StartSizing("BOTTOMRIGHT")
-            
-            -- Add an OnUpdate handler to enforce size limits in real-time
-            largerFrame:SetScript("OnUpdate", function(self)
-                local currentWidth = self:GetWidth()
-                local currentHeight = self:GetHeight()
+        -- Add the resize handle
+        resizeHandle = CreateFrame("Frame", nil, largerFrame)
+        resizeHandle:SetSize(8, 8)
+        resizeHandle:SetPoint("BOTTOMRIGHT", largerFrame, "BOTTOMRIGHT", 0, 0)
+        resizeHandle:EnableMouse(true)
+        resizeHandle.texture = resizeHandle:CreateTexture(nil, "OVERLAY")
+        resizeHandle.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+        resizeHandle.texture:SetSize(8, 8)
+        resizeHandle.texture:SetPoint("CENTER", resizeHandle, "CENTER")
+        resizeHandle:SetScript("OnEnter", function(self)
+            self.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+        end)
+        resizeHandle:SetScript("OnLeave", function(self)
+            self.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+        end)
+        resizeHandle:SetScript("OnMouseDown", function(self, button)
+            if button == "LeftButton" then
+                largerFrame:StartSizing("BOTTOMRIGHT")
                 
-                -- Enforce minimum and maximum width
-                if currentWidth < 40 then
-                    self:SetWidth(40)
-                elseif currentWidth > 1500 then
-                    self:SetWidth(1500)
-                end
-                
-                -- Enforce minimum and maximum height
-                if currentHeight < 20 then
-                    self:SetHeight(20)
-                elseif currentHeight > 200 then
-                    self:SetHeight(200)
-                end
-            end)
-        end
-    end)
-    resizeHandle:SetScript("OnMouseUp", function(self)
-        self.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
-        largerFrame:StopMovingOrSizing()
-        largerFrame:SetScript("OnUpdate", nil)
-        BetterExpBar:SaveFramePosition(largerFrame, "largerFrame")
-    end)
+                -- Add an OnUpdate handler to enforce size limits in real-time
+                largerFrame:SetScript("OnUpdate", function(self)
+                    local currentWidth = self:GetWidth()
+                    local currentHeight = self:GetHeight()
+                    
+                    -- Enforce minimum and maximum width
+                    if currentWidth < 40 then
+                        self:SetWidth(40)
+                    elseif currentWidth > 1500 then
+                        self:SetWidth(1500)
+                    end
+                    
+                    -- Enforce minimum and maximum height
+                    if currentHeight < 20 then
+                        self:SetHeight(20)
+                    elseif currentHeight > 200 then
+                        self:SetHeight(200)
+                    end
+                end)
+            end
+        end)
+        resizeHandle:SetScript("OnMouseUp", function(self)
+            self.texture:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+            largerFrame:StopMovingOrSizing()
+            largerFrame:SetScript("OnUpdate", nil)
+            BetterExpBar:SaveFramePosition(largerFrame, "largerFrame")
+        end)
 
-    -- Create experience bar
-    expBarFrame = CreateFrame("StatusBar", "CustomExpBar", largerFrame, "TextStatusBar, BackdropTemplate")
-    expBarFrame:SetSize(self.db.profile.expBar.width, self.db.profile.expBar.height)
-    expBarFrame:SetPoint("CENTER", largerFrame, "CENTER", 0, 0)
-    expBarFrame:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-    expBarFrame:EnableMouse(true)
-    expBarFrame:SetMovable(true)
-    expBarFrame:RegisterForDrag("LeftButton")
-    expBarFrame:SetScript("OnDragStart", function(self)
-        largerFrame:StartMoving()
-    end)
-    expBarFrame:SetScript("OnDragStop", function(self)
-        largerFrame:StopMovingOrSizing()
-        BetterExpBar:SaveFramePosition(largerFrame, "largerFrame")
-    end)
-    local expColor = self.db.profile.colors.exp
-    expBarFrame:SetStatusBarColor(expColor.r, expColor.g, expColor.b)
-    expBarFrame:SetAlpha(self.db.profile.expBar.opacity)
-    expBarFrame:SetFrameLevel(2)
-    expBarFrame:Show()
+        -- Create experience bar
+        expBarFrame = CreateFrame("StatusBar", "CustomExpBar", largerFrame, "TextStatusBar, BackdropTemplate")
+        expBarFrame:SetSize(self.db.profile.expBar.width, self.db.profile.expBar.height)
+        expBarFrame:SetPoint("CENTER", largerFrame, "CENTER", 0, 0)
+        expBarFrame:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+        expBarFrame:EnableMouse(true)
+        expBarFrame:SetMovable(true)
+        expBarFrame:RegisterForDrag("LeftButton")
+        expBarFrame:SetScript("OnDragStart", function(self)
+            largerFrame:StartMoving()
+        end)
+        expBarFrame:SetScript("OnDragStop", function(self)
+            largerFrame:StopMovingOrSizing()
+            BetterExpBar:SaveFramePosition(largerFrame, "largerFrame")
+        end)
+        local expColor = self.db.profile.colors.exp
+        expBarFrame:SetStatusBarColor(expColor.r, expColor.g, expColor.b)
+        expBarFrame:SetAlpha(self.db.profile.expBar.opacity)
+        expBarFrame:SetFrameLevel(2)
+        expBarFrame:Show()
 
-    -- Create rested bar
-    restedBar = CreateFrame("StatusBar", nil, expBarFrame)
-    restedBar:SetAllPoints(expBarFrame)
-    restedBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-    local restedColor = self.db.profile.colors.rested
-    restedBar:SetStatusBarColor(restedColor.r, restedColor.g, restedColor.b, restedColor.a)
-    restedBar:SetFrameLevel(1)
-    restedBar:Show()
+        -- Create rested bar
+        restedBar = CreateFrame("StatusBar", nil, expBarFrame)
+        restedBar:SetAllPoints(expBarFrame)
+        restedBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+        local restedColor = self.db.profile.colors.rested
+        restedBar:SetStatusBarColor(restedColor.r, restedColor.g, restedColor.b, restedColor.a)
+        restedBar:SetFrameLevel(1)
+        restedBar:Show()
 
-    -- Create experience text
-    expText = expBarFrame:CreateFontString(nil, "OVERLAY")
-    expText:SetFont("Fonts\\FRIZQT__.TTF", self.db.profile.expBar.textSize, "OUTLINE")
-    expText:SetPoint("CENTER", expBarFrame, "CENTER", 0, 0)
+        -- Create experience text
+        expText = expBarFrame:CreateFontString(nil, "OVERLAY")
+        expText:SetFont("Fonts\\FRIZQT__.TTF", self.db.profile.expBar.textSize, "OUTLINE")
+        expText:SetPoint("CENTER", expBarFrame, "CENTER", 0, 0)
 
-    -- Create tooltip frame
-    tooltipFrame = CreateFrame("Frame", "ExpBarTooltipFrame", UIParent, "BackdropTemplate")
-    tooltipFrame:SetSize(200, 100)
-    tooltipFrame:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        edgeSize = 10,
-    })
-    tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, self.db.profile.tooltip.offsetY)
-    tooltipFrame:SetFrameStrata("TOOLTIP")
-    tooltipFrame:Hide()
-
-    tooltipText = tooltipFrame:CreateFontString(nil, "OVERLAY")
-    tooltipText:SetFont("Fonts\\FRIZQT__.TTF", self.db.profile.tooltip.fontSize, "OUTLINE")
-    tooltipText:SetPoint("TOPLEFT", tooltipFrame, "TOPLEFT", 10, -10)
-    tooltipText:SetJustifyH("LEFT")
-    tooltipText:SetJustifyV("TOP")
-    tooltipText:SetText("")
-    
-    -- Apply tooltip styling
-    self:ApplyTooltipStyle(tooltipFrame, tooltipText)
-
-    -- Setup frame interactions
-    expBarFrame:SetScript("OnEnter", function(self)
-        if BetterExpBar.db.profile.tooltip.enabled then
-            BetterExpBar:UpdateTooltipText()
-            tooltipFrame:ClearAllPoints()
-            tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, BetterExpBar.db.profile.tooltip.offsetY)
-            tooltipFrame:Show()
-        end
-    end)
-
-    expBarFrame:SetScript("OnLeave", function(self)
+        -- Create tooltip frame
+        tooltipFrame = CreateFrame("Frame", "ExpBarTooltipFrame", UIParent, "BackdropTemplate")
+        tooltipFrame:SetSize(200, 100)
+        tooltipFrame:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            edgeSize = 10,
+        })
+        tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, self.db.profile.tooltip.offsetY)
+        tooltipFrame:SetFrameStrata("TOOLTIP")
         tooltipFrame:Hide()
-    end)
 
-    expBarFrame:SetScript("OnMouseUp", function(self, button)
-        if button == "RightButton" then
-            AceConfigDialog:Open("BetterExpBar")
-        end
-    end)
+        tooltipText = tooltipFrame:CreateFontString(nil, "OVERLAY")
+        tooltipText:SetFont("Fonts\\FRIZQT__.TTF", self.db.profile.tooltip.fontSize, "OUTLINE")
+        tooltipText:SetPoint("TOPLEFT", tooltipFrame, "TOPLEFT", 10, -10)
+        tooltipText:SetJustifyH("LEFT")
+        tooltipText:SetJustifyV("TOP")
+        tooltipText:SetText("")
+        
+        -- Apply tooltip styling
+        self:ApplyTooltipStyle(tooltipFrame, tooltipText)
 
-    expBarContainer:HookScript("OnSizeChanged", function()
-        BetterExpBar:UpdateLargerFrame()
-    end)
+        -- Setup frame interactions
+        expBarFrame:SetScript("OnEnter", function(self)
+            if BetterExpBar.db.profile.tooltip.enabled then
+                BetterExpBar:UpdateTooltipText()
+                tooltipFrame:ClearAllPoints()
+                tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, BetterExpBar.db.profile.tooltip.offsetY)
+                tooltipFrame:Show()
+            end
+        end)
 
-    largerFrame:HookScript("OnSizeChanged", function(self)
-        local newWidth = math.max(self:GetWidth() - 10, 10)
-        local newHeight = math.max(self:GetHeight() - 10, 5)
-        expBarContainer:SetSize(newWidth, newHeight)
-        expBarFrame:SetSize(newWidth, newHeight)
-        BetterExpBar:UpdateExpBar()
-    end)
+        expBarFrame:SetScript("OnLeave", function(self)
+            tooltipFrame:Hide()
+        end)
 
-    -- Restore saved positions
-    self:RestoreFramePosition(largerFrame, "largerFrame")
-    self:RestoreFramePosition(expBarContainer, "expBar")
-    
-    -- Apply initial styles
-    self:ApplyBarStyle(largerFrame, "largerFrame")
-    self:SynchronizeBarStyles()
+        expBarFrame:SetScript("OnMouseUp", function(self, button)
+            if button == "RightButton" then
+                AceConfigDialog:Open("BetterExpBar")
+            end
+        end)
+
+        expBarContainer:HookScript("OnSizeChanged", function()
+            BetterExpBar:UpdateLargerFrame()
+        end)
+
+        largerFrame:HookScript("OnSizeChanged", function(self)
+            local newWidth = math.max(self:GetWidth() - 10, 10)
+            local newHeight = math.max(self:GetHeight() - 10, 5)
+            expBarContainer:SetSize(newWidth, newHeight)
+            expBarFrame:SetSize(newWidth, newHeight)
+            BetterExpBar:UpdateExpBar()
+        end)
+
+        -- Restore saved positions
+        self:RestoreFramePosition(largerFrame, "largerFrame")
+        self:RestoreFramePosition(expBarContainer, "expBar")
+        
+        -- Apply initial styles
+        self:ApplyBarStyle(largerFrame, "largerFrame")
+        self:SynchronizeBarStyles()
+    end
     
     -- Hide default bars
     self:HideDefaultExpBar()
@@ -891,9 +890,11 @@ function BetterExpBar:HideDefaultExpBar()
         MainMenuBar.ExpBar:Hide()
         MainMenuBar.ExpBar:UnregisterAllEvents()
     end
-    if ReputationWatchBar then
-        ReputationWatchBar:Hide()
-        ReputationWatchBar:UnregisterAllEvents()
+    if self.db and self.db.profile and self.db.profile.repBarEnabled then
+        if ReputationWatchBar then
+            ReputationWatchBar:Hide()
+            ReputationWatchBar:UnregisterAllEvents()
+        end
     end
 end
 

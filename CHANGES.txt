@@ -1,3 +1,9 @@
+Version 2.9.3 - January 18, 2026
+- Fixed reputation bar disappearing when unchecking experience bar in config
+- Experience bar and reputation bar now have independent enable/disable controls
+- Frame initialization improved to allow reputation bar creation when experience bar is disabled
+- Prevented accidental hiding of default reputation bar when only experience bar is disabled
+
 Version 2.9.2 - January 15, 2026
 - Fixed GetWatchedFactionInfo() API compatibility issues with TBC Classic
 - Updated .toc file Interface version to 20504 (TBC Classic)
