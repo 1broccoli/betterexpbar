@@ -2,7 +2,7 @@
 ## Title: |cFFFFC0CBBetter|r Experience Bars
 ## Notes: Moveable experience and reputation bars for WoW TBC
 ## Author: Pegga
-## Version: 2.9.3
+## Version: 2.9.4
 ## SavedVariables: BetterExpBarDB
 
 Libs\LibStub\LibStub.lua
@@ -10,6 +10,7 @@ Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
 Libs\AceAddon-3.0\AceAddon-3.0.xml
 Libs\AceDB-3.0\AceDB-3.0.xml
 Libs\AceEvent-3.0\AceEvent-3.0.xml
+Libs\AceTimer-3.0\AceTimer-3.0.xml
 Libs\AceConsole-3.0\AceConsole-3.0.xml
 Libs\AceGUI-3.0\AceGUI-3.0.xml
 Libs\AceConfig-3.0\AceConfig-3.0.xml

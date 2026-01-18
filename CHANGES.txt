@@ -1,3 +1,13 @@
+Version 2.9.4 - January 18, 2026
+- Fixed reputation bar not updating when switching tracked factions
+- Added AceTimer-3.0 module for periodic reputation bar updates
+- Implemented proper Classic/Anniversary WoW faction tracking using GetFactionInfo() with isWatched parameter
+- Added COMBAT_TEXT_UPDATE event listener for reputation changes
+- Added 2-second repeating timer as fallback to ensure bar always updates
+- Removed automatic faction selection fallback that incorrectly displayed highest reputation when nothing tracked
+- Reputation bar now correctly shows "No Faction Tracked" when no faction is being watched
+- Fixed faction tracking to work properly with shift-click faction selection in reputation panel
+
 Version 2.9.3 - January 18, 2026
 - Fixed reputation bar disappearing when unchecking experience bar in config
 - Experience bar and reputation bar now have independent enable/disable controls
@@ -13,22 +23,14 @@ Version 2.9.2 - January 15, 2026
 - Added proper null checks and error handling for reputation data
 - Verified addon works correctly on TBC Classic servers
 
-lightweight tag 341c76b6cff52179e14baba3b55ce836624b9b12 2.9
-Author:	GitHub <noreply@github.com>
-Date:	Thu Jan 15 10:12:57 2026 -0700
 
-commit 341c76b6cff52179e14baba3b55ce836624b9b12
-Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
-Date:   Thu Jan 15 10:12:57 2026 -0700
-
-    Add files via upload
     
-    Version 2.9 - January 15, 2026
+Version 2.9 - January 15, 2026
     - Added TBC Classic interface tag (Interface-BCC: 20504) while keeping Classic Era (11502)
     - Verified addon works on both Classic Era and TBC Classic with shared codebase
     - No code changes required; ensured libraries are loaded in both environments
     
-    Version 2.8 - January 15, 2026
+Version 2.8 - January 15, 2026
     - Added minimap button using LibDBIcon
     - Added option to show/hide minimap button in settings
     - Added option to lock minimap button position
@@ -38,23 +40,9 @@ Date:   Thu Jan 15 10:12:57 2026 -0700
     - Minimap button position is saved per profile
     - Now works with both the new Ace3-based code and classic versions
     
-    Version 1.8 - January 15, 2026
+Version 1.8 - January 15, 2026
     - Updated for TBC Classic compatibility
     - Interface version updated to 20504
     - Now compatible with both TBC Classic and Classic WoW
     - No code changes required - fully backward compatible
     
-    
-    Date:   Mon Jun 16 02:01:29 2025 -0700
-    
-        Add files via upload
-    
-        - Added % amount of rested exp to tooltip
-        - New Customizable bar layout in next update!
-
-commit 8cab5f02075b455f1a73adaa36f74d336a737004
-Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
-Date:   Wed Dec 10 04:22:39 2025 -0700
-
-    Add files via upload
-
