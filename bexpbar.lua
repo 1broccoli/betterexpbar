@@ -3,6 +3,7 @@ local BetterExpBar = LibStub("AceAddon-3.0"):NewAddon("BetterExpBar", "AceConsol
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceDB = LibStub("AceDB-3.0")
+local AceDBOptions = LibStub("AceDBOptions-3.0")
 local LDB = LibStub("LibDataBroker-1.1", true)
 local LDBIcon = LibStub("LibDBIcon-1.0", true)
 
@@ -1031,6 +1032,7 @@ function BetterExpBar:RegisterOptions()
         desc = "v2.7 | By Pegga",
         type = "group",
         args = {
+            profiles = AceDBOptions:GetOptionsTable(self.db),
             enabled = {
                 type = "toggle",
                 name = "Enable Experience Bar",
@@ -1483,4 +1485,9 @@ function BetterExpBar:RegisterOptions()
 
     AceConfig:RegisterOptionsTable("BetterExpBar", options)
     AceConfigDialog:AddToBlizOptions("BetterExpBar", "Better Exp & Rep Bars")
+    
+    -- Add profile options
+    local profileOptions = AceDBOptions:GetOptionsTable(self.db)
+    AceConfig:RegisterOptionsTable("BetterExpBar_Profiles", profileOptions)
+    AceConfigDialog:AddToBlizOptions("BetterExpBar_Profiles", "Profiles", "Better Exp & Rep Bars")
 end

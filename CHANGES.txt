@@ -1,48 +1,19 @@
+Version 2.9.5 - January 22, 2026
+- Added per-character profile management system using AceDB
+- Added AceDBOptions-3.0 for profile management interface
+- Each character can now create, copy, delete, and switch between multiple profiles
+- Profile options accessible through minimap button and Blizzard options panel
+- Changed from SavedVariables to SavedVariablesPerCharacter in TOC file
+- Each character maintains independent profile sets for bar positions, colors, and preferences
+
+    
 Version 2.9.4 - January 18, 2026
-- Fixed reputation bar not updating when switching tracked factions
-- Added AceTimer-3.0 module for periodic reputation bar updates
-- Implemented proper Classic/Anniversary WoW faction tracking using GetFactionInfo() with isWatched parameter
-- Added COMBAT_TEXT_UPDATE event listener for reputation changes
-- Added 2-second repeating timer as fallback to ensure bar always updates
-- Removed automatic faction selection fallback that incorrectly displayed highest reputation when nothing tracked
-- Reputation bar now correctly shows "No Faction Tracked" when no faction is being watched
-- Fixed faction tracking to work properly with shift-click faction selection in reputation panel
+    - Fixed reputation bar not updating when switching tracked factions
+    - Added AceTimer-3.0 module for periodic reputation bar updates
+    - Implemented proper Classic/Anniversary WoW faction tracking using GetFactionInfo() with isWatched parameter
+    - Added COMBAT_TEXT_UPDATE event listener for reputation changes
+    - Added 2-second repeating timer as fallback to ensure bar always updates
+    - Removed automatic faction selection fallback that incorrectly displayed highest reputation when nothing tracked
+    - Reputation bar now correctly shows "No Faction Tracked" when no faction is being watched
+    - Fixed faction tracking to work properly with shift-click faction selection in reputation panel
 
-Version 2.9.3 - January 18, 2026
-- Fixed reputation bar disappearing when unchecking experience bar in config
-- Experience bar and reputation bar now have independent enable/disable controls
-- Frame initialization improved to allow reputation bar creation when experience bar is disabled
-- Prevented accidental hiding of default reputation bar when only experience bar is disabled
-
-Version 2.9.2 - January 15, 2026
-- Fixed GetWatchedFactionInfo() API compatibility issues with TBC Classic
-- Updated .toc file Interface version to 20504 (TBC Classic)
-- Implemented fallback reputation bar system using GetFactionInfo() for better compatibility
-- Fixed nil value errors in reputation bar calculations
-- Reputation bar now properly displays tracked faction information
-- Added proper null checks and error handling for reputation data
-- Verified addon works correctly on TBC Classic servers
-
-
-    
-Version 2.9 - January 15, 2026
-    - Added TBC Classic interface tag (Interface-BCC: 20504) while keeping Classic Era (11502)
-    - Verified addon works on both Classic Era and TBC Classic with shared codebase
-    - No code changes required; ensured libraries are loaded in both environments
-    
-Version 2.8 - January 15, 2026
-    - Added minimap button using LibDBIcon
-    - Added option to show/hide minimap button in settings
-    - Added option to lock minimap button position
-    - Minimap button supports left-click to open options, right-click to reset position
-    - Added /beb minimap command to toggle minimap button visibility
-    - Updated SavedVariables to BetterExpBarDB for better compatibility
-    - Minimap button position is saved per profile
-    - Now works with both the new Ace3-based code and classic versions
-    
-Version 1.8 - January 15, 2026
-    - Updated for TBC Classic compatibility
-    - Interface version updated to 20504
-    - Now compatible with both TBC Classic and Classic WoW
-    - No code changes required - fully backward compatible
-    
