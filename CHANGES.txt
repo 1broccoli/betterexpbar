@@ -1,19 +1,24 @@
-Version 2.9.5 - January 22, 2026
-- Added per-character profile management system using AceDB
-- Added AceDBOptions-3.0 for profile management interface
-- Each character can now create, copy, delete, and switch between multiple profiles
-- Profile options accessible through minimap button and Blizzard options panel
-- Changed from SavedVariables to SavedVariablesPerCharacter in TOC file
-- Each character maintains independent profile sets for bar positions, colors, and preferences
+Version 2.9.6 - January 28, 2026
+- Fixed reputation bar tooltip showing wrong faction during auto-changes
+- Tooltip faction-lookup logic now matches bar logic by checking isWatched flag
+- Ensures bar and tooltip display the same faction when switching watched factions
 
+
+lightweight tag cb7793b660e588057aee0c3750d70129b1cb0d68 BetterExpBar-2.9.5
+Author:	GitHub <noreply@github.com>
+Date:	Thu Jan 22 16:05:49 2026 -0700
+
+commit cb7793b660e588057aee0c3750d70129b1cb0d68
+Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
+Date:   Thu Jan 22 16:05:49 2026 -0700
+
+    Add files via upload
     
-Version 2.9.4 - January 18, 2026
-    - Fixed reputation bar not updating when switching tracked factions
-    - Added AceTimer-3.0 module for periodic reputation bar updates
-    - Implemented proper Classic/Anniversary WoW faction tracking using GetFactionInfo() with isWatched parameter
-    - Added COMBAT_TEXT_UPDATE event listener for reputation changes
-    - Added 2-second repeating timer as fallback to ensure bar always updates
-    - Removed automatic faction selection fallback that incorrectly displayed highest reputation when nothing tracked
-    - Reputation bar now correctly shows "No Faction Tracked" when no faction is being watched
-    - Fixed faction tracking to work properly with shift-click faction selection in reputation panel
+    Version 2.9.5 - January 22, 2026
+    - Added per-character profile management system using AceDB
+    - Added AceDBOptions-3.0 for profile management interface
+    - Each character can now create, copy, delete, and switch between multiple profiles
+    - Profile options accessible through minimap button and Blizzard options panel
+    - Changed from SavedVariables to SavedVariablesPerCharacter in TOC file
+    - Each character maintains independent profile sets for bar positions, colors, and preferences
 

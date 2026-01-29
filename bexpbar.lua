@@ -786,42 +786,26 @@ function BetterExpBar:UpdateRepTooltip()
     
     local name, standing, minRep, maxRep, currentRep, factionID
     
-    -- Try GetWatchedFactionInfo if available
+    -- Try GetWatchedFactionInfo first (Retail/Modern WoW)
     if GetWatchedFactionInfo then
         name, standing, minRep, maxRep, currentRep, factionID = GetWatchedFactionInfo()
-    else
-        -- Fallback: look for watched faction in the UI
-        if ReputationFrame and ReputationFrame.activeCategory then
-            local scrollFrame = ReputationFrame.ScrollFrame
-            if scrollFrame and scrollFrame.ScrollChild then
-                for i = 1, scrollFrame.ScrollChild:GetNumChildren() do
-                    local child = select(i, scrollFrame.ScrollChild:GetChildren())
-                    if child and child.factionIndex then
-                        -- GetFactionInfo returns: name, description, standing, min, max, value, atWar, canToggle, isHeader, collapsed, hasRep, isWatched
-                        local n, desc, s, min, max, val = GetFactionInfo(child.factionIndex)
-                        if n and child.HighlightTexture and child.HighlightTexture:IsShown() then
-                            name, standing, minRep, maxRep, currentRep = n, s, min, max, val
-                            factionID = child.factionIndex
-                            break
-                        end
-                    end
-                end
-            end
-        end
-        
-        -- Last resort: find the highest reputation faction
-        if not name and GetNumFactions then
-            local bestIndex, bestRep = nil, -42999
-            for i = 1, GetNumFactions() do
-                local n, desc, s, min, max, val = GetFactionInfo(i)
-                if n and val then
-                    local repVal = val - min
-                    if repVal > bestRep then
-                        bestRep = repVal
-                        bestIndex = i
-                        name, standing, minRep, maxRep, currentRep, factionID = n, s, min, max, val, i
-                    end
-                end
+    end
+    
+    -- If that didn't work, manually search for the watched faction (Classic/Anniversary)
+    if not name and GetNumFactions then
+        local numFactions = GetNumFactions()
+        for i = 1, numFactions do
+            local factionName, description, standingId, barMin, barMax, barValue, atWarWith, canToggleAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, factionId, hasBonusRepGain, canBeLFGBonus = GetFactionInfo(i)
+            
+            -- Check if this faction is being watched
+            if factionName and isWatched then
+                name = factionName
+                standing = standingId
+                minRep = barMin
+                maxRep = barMax
+                currentRep = barValue
+                factionID = i
+                break
             end
         end
     end
