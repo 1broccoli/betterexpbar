@@ -1,9 +1,14 @@
-## Interface: 20504
+## Interface: 20505, 20505, 20504, 20503, 20502, 20501, 11508
+## Interface-Classic: 11508
+## Interface-TBC: 20505, 20504, 20503, 20502, 20501
 ## Title: |cFFFFC0CBBetter|r Experience Bars
 ## Notes: Moveable experience and reputation bars for WoW TBC
 ## Author: Pegga
-## Version: 2.9.6
+## Version: 3.0.2
 ## SavedVariablesPerCharacter: BetterExpBarDB
+## OptionalDeps: Questie, WeakAuras, Details, Ace3
+## X-Curse-Project-ID: 1228891
+## Website: https://github.com/1broccoli/betterexpbar
 
 Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
@@ -15,5 +20,11 @@ Libs\AceTimer-3.0\AceTimer-3.0.xml
 Libs\AceConsole-3.0\AceConsole-3.0.xml
 Libs\AceGUI-3.0\AceGUI-3.0.xml
 Libs\AceConfig-3.0\AceConfig-3.0.xml
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.xml
+Libs\LibButtonGlow-1.0\LibButtonGlow-1.0.lua
+Libs\LibAboutPanel-2.0\LibAboutPanel-2.0\LibAboutPanel-2.0.lua
+Libs\LibAceConfigHelper\LibAceConfigHelper.lua
+Libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 
 bexpbar.lua

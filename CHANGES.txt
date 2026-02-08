@@ -1,3 +1,40 @@
+Version 3.0.2 - February 7, 2026
+- Updated .Toc to include all TBC versions and Classic
+- Updated file to post in correct directory (sorry)
+
+Version 3.0 - February 5, 2026
+CUSTOMIZATION & STYLING
+- Fully customizable experience and reputation bars with adjustable width, height, and scale
+- Choose from multiple fonts, textures, and colors for your bars and tooltips
+- Link bars together for synchronized positioning and sizing
+- Lock bar positions to prevent accidental movement
+- All settings saved per-character for easy profile switching
+
+EXPERIENCE BAR
+- Quest XP prediction shows estimated gains from completed quests
+- Separate rested XP progression bar with independent opacity control
+- Quest XP progress bar highlights with customizable color
+- Intelligent bonus tracking with separate visual indicators
+
+REPUTATION BAR
+- Accurate faction standing colors matching WoW standards (Yellow for Neutral, Green for Friendly, Blue for Revered, Purple for Exalted)
+- Bonus reputation prediction from quests displayed on the bar
+- Watch only actively tracked faction or show all reputation gains
+- Fully centered faction text with proper positioning
+
+TOOLTIPS & DISPLAY
+- Toggle between abbreviated (40k) and full (40,059) number formats
+- Consistent number formatting across all tooltips
+- Detailed breakdown of current, remaining, and bonus reputation
+- Hover tooltips show comprehensive bar information
+
+INTERFACE
+- Minimap button for quick access (can be hidden)
+- Per-character profile management to save different configurations
+- Organized settings panels with tabs for General, Experience, Reputation, Tooltips, Profiles, and Database
+- One-click reset to restore default settings
+
+
 Version 2.9.6 - January 28, 2026
 - Fixed reputation bar tooltip showing wrong faction during auto-changes
 - Tooltip faction-lookup logic now matches bar logic by checking isWatched flag
