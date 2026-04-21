@@ -2,7 +2,7 @@
 ## Title: |cFFFFC0CBBetter|r Experience Bars
 ## Notes: Moveable experience and reputation bars for WoW Classic
 ## Author: Pegga
-## Version: 2.9.6
+## Version: 3.0.6
 ## SavedVariablesPerCharacter: BetterExpBarDB
 
 Libs\LibStub\LibStub.lua
@@ -15,5 +15,6 @@ Libs\AceTimer-3.0\AceTimer-3.0.xml
 Libs\AceConsole-3.0\AceConsole-3.0.xml
 Libs\AceGUI-3.0\AceGUI-3.0.xml
 Libs\AceConfig-3.0\AceConfig-3.0.xml
+Libs\LibSharedMedia-3.0\lib.xml
 
 bexpbar.lua

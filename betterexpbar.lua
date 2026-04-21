@@ -41,7 +41,11 @@ local defaults = {
             backgroundColor = { r = 0, g = 0, b = 0, a = 0.8 },
             borderColor = { r = 1, g = 1, b = 1, a = 1 },
             showOnHover = true,
-            offsetY = 10,
+            offsetY = 10, -- Legacy fallback for older profiles
+            expOffsetX = 0,
+            expOffsetY = 10,
+            repOffsetX = 0,
+            repOffsetY = 10,
             -- Experience bar tooltip options
             expTooltip = {
                 showLevel = true,
@@ -49,6 +53,13 @@ local defaults = {
                 showRested = true,
                 showRemaining = true,
                 showPercentage = true,
+                -- NovaInstanceTracker optional features
+                showXpPerHour = false,
+                showXpPerHourPercent = false,
+                showXpFromLastInstance = false,
+                showXpFromLastInstancePercent = false,
+                showXpTodayTotal = false,
+                showXpTodayTotalPercent = false,
             },
             -- Reputation bar tooltip options
             repTooltip = {
@@ -57,6 +68,13 @@ local defaults = {
                 showCurrent = true,
                 showRemaining = true,
                 showPercentage = true,
+                -- NovaInstanceTracker optional features
+                showRepPerHour = false,
+                showRepPerHourPercent = false,
+                showRepFromLastInstance = false,
+                showRepFromLastInstancePercent = false,
+                showRepTodayTotal = false,
+                showRepTodayTotalPercent = false,
             },
         },
         largerFrame = {
@@ -84,6 +102,13 @@ local defaults = {
             texture = "Interface\\TargetingFrame\\UI-StatusBar",
             showText = true,
             textFormat = "percentage", -- Options: percentage, none
+            -- Pulse/Glow settings
+            pulseOnLevel = false,
+            pulseOnGain = false,
+            pulseStyle = "border", -- Options: border, glow, fill
+            pulseColor = { r = 0, g = 1, b = 0, a = 1 }, -- Green by default
+            pulseIntensity = 1.0,
+            pulseAntiSpamMs = 500,
         },
         repBar = {
             point = "TOP",
@@ -111,10 +136,25 @@ local defaults = {
             showQuestXP = true,
             useVerbose = false,
             useCommon = true,
+            useCommaFormat = false,
         },
         repDisplay = {
             showBonusRep = true,
             trackWatchedFaction = true,
+        },
+        tooltipPreview = {
+            enabled = false,
+            locked = false,
+            showExp = true,
+            showRep = true,
+            expPoint = "CENTER",
+            expRelativePoint = "CENTER",
+            expXOfs = 0,
+            expYOfs = 140,
+            repPoint = "CENTER",
+            repRelativePoint = "CENTER",
+            repXOfs = 0,
+            repYOfs = -140,
         },
     },
 }
@@ -123,11 +163,328 @@ local defaults = {
 local expBarContainer, largerFrame, expBarFrame, restedBar, questXPBar, expText, tooltipFrame, tooltipText, resizeHandle
 local repBarFrame, repBarInner, bonusRepBar, repText, repTooltipFrame, repTooltipText, repResizeHandle
 local expTexturePreview, repTexturePreview
+local tooltipPreviewExpAnchor, tooltipPreviewExpBar, tooltipPreviewExpBarText
+local tooltipPreviewRepAnchor, tooltipPreviewRepBar, tooltipPreviewRepBarText
+local tooltipPreviewExpFrame, tooltipPreviewExpText, tooltipPreviewRepFrame, tooltipPreviewRepText
 local nativeBarHooks = {}
+local ADDON_MEDIA_PATH = "Interface\\AddOns\\betterexpbar\\Media"
+local CUSTOM_FONT_MEDIA = {
+    { "Adventure", ADDON_MEDIA_PATH .. "\\Fonts\\adventure.ttf" },
+    { "Bazooka", ADDON_MEDIA_PATH .. "\\Fonts\\bazooka.ttf" },
+    { "Big Noodle Titling", ADDON_MEDIA_PATH .. "\\Fonts\\BigNoodleTitling.ttf" },
+    { "Cooline", ADDON_MEDIA_PATH .. "\\Fonts\\cooline.ttf" },
+    { "DieDieDie", ADDON_MEDIA_PATH .. "\\Fonts\\diediedie.ttf" },
+    { "Diogenes", ADDON_MEDIA_PATH .. "\\Fonts\\diogenes.ttf" },
+    { "Expressway", ADDON_MEDIA_PATH .. "\\Fonts\\Expressway.ttf" },
+    { "Fira Mono Medium", ADDON_MEDIA_PATH .. "\\Fonts\\FiraMono-Medium.ttf" },
+    { "Fira Sans Condensed Heavy", ADDON_MEDIA_PATH .. "\\Fonts\\FiraSansCondensed-Heavy.ttf" },
+    { "Fira Sans Condensed Medium", ADDON_MEDIA_PATH .. "\\Fonts\\FiraSansCondensed-Medium.ttf" },
+    { "Fira Sans Heavy", ADDON_MEDIA_PATH .. "\\Fonts\\FiraSans-Heavy.ttf" },
+    { "Fira Sans Medium", ADDON_MEDIA_PATH .. "\\Fonts\\FiraSans-Medium.ttf" },
+    { "Ginko", ADDON_MEDIA_PATH .. "\\Fonts\\ginko.ttf" },
+    { "Heroic", ADDON_MEDIA_PATH .. "\\Fonts\\heroic.ttf" },
+    { "Myriad", ADDON_MEDIA_PATH .. "\\Fonts\\Myriad.ttf" },
+    { "Porky", ADDON_MEDIA_PATH .. "\\Fonts\\porky.ttf" },
+    { "PT Sans Narrow Bold", ADDON_MEDIA_PATH .. "\\Fonts\\PTSansNarrow-Bold.ttf" },
+    { "PT Sans Narrow Regular", ADDON_MEDIA_PATH .. "\\Fonts\\PTSansNarrow-Regular.ttf" },
+    { "Talisman", ADDON_MEDIA_PATH .. "\\Fonts\\talisman.ttf" },
+    { "Transformers", ADDON_MEDIA_PATH .. "\\Fonts\\transformers.ttf" },
+    { "Yellowjacket", ADDON_MEDIA_PATH .. "\\Fonts\\yellowjacket.ttf" },
+}
+local CUSTOM_STATUSBAR_MEDIA = {
+    { "BetterExpBar Clean", ADDON_MEDIA_PATH .. "\\Textures\\Statusbar_Clean.blp" },
+    { "BetterExpBar Stripes", ADDON_MEDIA_PATH .. "\\Textures\\Statusbar_Stripes.blp" },
+    { "BetterExpBar Stripes Thin", ADDON_MEDIA_PATH .. "\\Textures\\Statusbar_Stripes_Thin.blp" },
+    { "BetterExpBar Stripes Thick", ADDON_MEDIA_PATH .. "\\Textures\\Statusbar_Stripes_Thick.blp" },
+    { "BetterExpBar Stripe Bar", ADDON_MEDIA_PATH .. "\\Textures\\stripe-bar.tga" },
+    { "BetterExpBar Rainbow Stripe Bar", ADDON_MEDIA_PATH .. "\\Textures\\stripe-rainbow-bar.tga" },
+    { "BetterExpBar Rainbow Bar", ADDON_MEDIA_PATH .. "\\Textures\\rainbowbar.tga" },
+    { "BetterExpBar Striped Texture", ADDON_MEDIA_PATH .. "\\Textures\\StripedTexture.tga" },
+}
+
+-- Session tracking for XP/Rep per hour calculations
+local sessionStartTime = GetServerTime()
+local sessionStartXP = 0
+local sessionStartRep = 0
+local sessionXPGained = 0
+local sessionRepGained = 0
+local lastRecordedXP = 0
+local lastRecordedRep = 0
+local lastInstanceXPGain = 0
+local lastInstanceRepGain = 0
+local dailyStartTime = date("*t", GetServerTime())
+local dailyXPGain = 0
+local dailyRepGain = 0
+local nitAvailable = false  -- Track if NIT is loaded
+
+-- Check if NovaInstanceTracker is available and loaded
+function BetterExpBar:IsNITAvailable()
+    if not NIT then return false end
+    if not NIT.db then return false end
+    nitAvailable = true
+    return true
+end
+
+function BetterExpBar:IsMaxLevel()
+    local playerLevel = UnitLevel("player") or 0
+    local maxLevel = GetMaxPlayerLevel() or 60
+    return playerLevel >= maxLevel
+end
+
+function BetterExpBar:RegisterCustomMedia()
+    if not LSM then return end
+
+    for _, media in ipairs(CUSTOM_FONT_MEDIA) do
+        LSM:Register("font", media[1], media[2])
+    end
+
+    for _, media in ipairs(CUSTOM_STATUSBAR_MEDIA) do
+        LSM:Register("statusbar", media[1], media[2])
+    end
+end
+
+function BetterExpBar:GetMediaOptions(mediatype, fallback)
+    if not LSM then
+        return fallback
+    end
+
+    local mediaTable = LSM:HashTable(mediatype)
+    local mediaList = LSM:List(mediatype)
+    local values = {}
+
+    if mediaTable and mediaList then
+        for _, mediaName in ipairs(mediaList) do
+            local mediaPath = mediaTable[mediaName]
+            if mediaPath and mediaPath ~= "" then
+                values[mediaPath] = mediaName
+            end
+        end
+    end
+
+    if next(values) then
+        return values
+    end
+
+    return fallback
+end
+
+function BetterExpBar:GetServerDayStart()
+    local now = date("*t", GetServerTime())
+    return GetServerTime() - (now.hour * 3600 + now.min * 60 + now.sec)
+end
+
+function BetterExpBar:GetLatestNITInstance(includeCurrent)
+    if not (self:IsNITAvailable() and NIT.data and NIT.data.instances) then
+        return nil
+    end
+    local playerName = UnitName("player")
+    for i = 1, #NIT.data.instances do
+        local instance = NIT.data.instances[i]
+        if instance and instance.playerName == playerName then
+            if includeCurrent then
+                return instance
+            end
+            if instance.leftTime and instance.leftTime > 0 then
+                return instance
+            end
+        end
+    end
+    return nil
+end
+
+-- Get XP statistics from NovaInstanceTracker if available
+-- NIT Data Fields Accessed: sessionXpGained, xpDailyTotal, sessionStartTime
+-- If NIT doesn't have these fields, they can be customized below
+function BetterExpBar:GetNITXPStats()
+    local xpPerHour = 0
+    local xpFromLastInstance = 0
+    local xpTodayTotal = 0
+    
+    -- Try to use NIT data if available
+    if self:IsNITAvailable() and NIT.data and NIT.data.instances then
+        -- Use current instance while inside, otherwise last completed instance
+        local lastInstance = self:GetLatestNITInstance(NIT.inInstance and true or false)
+        if lastInstance and lastInstance.xpFromChat then
+            xpFromLastInstance = tonumber(lastInstance.xpFromChat) or 0
+        end
+
+        local dayStart = self:GetServerDayStart()
+        local totalTimeToday = 0
+        local playerName = UnitName("player")
+        -- Calculate today's total by iterating through this character's instances
+        for i = 1, #NIT.data.instances do
+            local instance = NIT.data.instances[i]
+            if instance and instance.playerName == playerName and instance.enteredTime then
+                local leftTime = instance.leftTime or 0
+                local overlapsToday = instance.enteredTime >= dayStart
+                    or (leftTime > 0 and leftTime >= dayStart)
+                    or (leftTime == 0 and NIT.inInstance)
+                if overlapsToday then
+                    if instance.xpFromChat then
+                        xpTodayTotal = xpTodayTotal + (tonumber(instance.xpFromChat) or 0)
+                    end
+                    local overlapStart = instance.enteredTime
+                    if overlapStart < dayStart then
+                        overlapStart = dayStart
+                    end
+                    local overlapEnd = leftTime
+                    if overlapEnd == 0 and NIT.inInstance then
+                        overlapEnd = GetServerTime()
+                    end
+                    if overlapEnd and overlapEnd > overlapStart then
+                        totalTimeToday = totalTimeToday + (overlapEnd - overlapStart)
+                    end
+                end
+            end
+        end
+
+        -- Calculate per-hour from today's total and total instance time today
+        if totalTimeToday >= 60 and xpTodayTotal ~= 0 then
+            xpPerHour = math.floor(xpTodayTotal / (totalTimeToday / 3600))
+        end
+    end
+    
+    -- Fallback to session tracking if NIT didn't provide data
+    if xpPerHour == 0 and xpFromLastInstance == 0 and xpTodayTotal == 0 then
+        local sessionTime = GetServerTime() - sessionStartTime
+        if sessionTime > 0 and sessionTime >= 3600 then
+            xpPerHour = math.floor(sessionXPGained / (sessionTime / 3600))
+        end
+        xpFromLastInstance = lastInstanceXPGain
+        xpTodayTotal = dailyXPGain
+    end
+    
+    return xpPerHour, xpFromLastInstance, xpTodayTotal
+end
+
+-- Get Rep statistics from NovaInstanceTracker if available
+function BetterExpBar:GetNITRepStats()
+    local repPerHour = 0
+    local repFromLastInstance = 0
+    local repTodayTotal = 0
+    
+    -- Try to use NIT data if available
+    if self:IsNITAvailable() and NIT.data and NIT.data.instances then
+        -- Use current instance while inside, otherwise last completed instance
+        local lastInstance = self:GetLatestNITInstance(NIT.inInstance and true or false)
+        if lastInstance and lastInstance.rep then
+            for _, repGain in pairs(lastInstance.rep) do
+                if repGain then
+                    repFromLastInstance = repFromLastInstance + (tonumber(repGain) or 0)
+                end
+            end
+        end
+
+        local dayStart = self:GetServerDayStart()
+        local totalTimeToday = 0
+        local playerName = UnitName("player")
+        -- Calculate today's total by iterating through this character's instances
+        for i = 1, #NIT.data.instances do
+            local instance = NIT.data.instances[i]
+            if instance and instance.playerName == playerName and instance.enteredTime then
+                local leftTime = instance.leftTime or 0
+                local overlapsToday = instance.enteredTime >= dayStart
+                    or (leftTime > 0 and leftTime >= dayStart)
+                    or (leftTime == 0 and NIT.inInstance)
+                if overlapsToday then
+                    if instance.rep then
+                        for _, repGain in pairs(instance.rep) do
+                            if repGain then
+                                repTodayTotal = repTodayTotal + (tonumber(repGain) or 0)
+                            end
+                        end
+                    end
+                    local overlapStart = instance.enteredTime
+                    if overlapStart < dayStart then
+                        overlapStart = dayStart
+                    end
+                    local overlapEnd = leftTime
+                    if overlapEnd == 0 and NIT.inInstance then
+                        overlapEnd = GetServerTime()
+                    end
+                    if overlapEnd and overlapEnd > overlapStart then
+                        totalTimeToday = totalTimeToday + (overlapEnd - overlapStart)
+                    end
+                end
+            end
+        end
+
+        -- Calculate per-hour from today's total and total instance time today
+        if totalTimeToday >= 60 and repTodayTotal ~= 0 then
+            repPerHour = math.floor(repTodayTotal / (totalTimeToday / 3600))
+        end
+    end
+    
+    -- Fallback to session tracking if NIT didn't provide data
+    if repPerHour == 0 and repFromLastInstance == 0 and repTodayTotal == 0 then
+        local sessionTime = GetServerTime() - sessionStartTime
+        if sessionTime > 0 and sessionTime >= 3600 then
+            repPerHour = math.floor(sessionRepGained / (sessionTime / 3600))
+        end
+        repFromLastInstance = lastInstanceRepGain
+        repTodayTotal = dailyRepGain
+    end
+
+    return repPerHour, repFromLastInstance, repTodayTotal
+end
+
+-- Update session XP tracking
+function BetterExpBar:UpdateSessionXPTracking()
+    local currentXP = UnitXP("player") or 0
+    if lastRecordedXP == 0 then
+        lastRecordedXP = currentXP
+        sessionStartXP = currentXP
+    else
+        local xpGained = currentXP - lastRecordedXP
+        if xpGained > 0 then
+            sessionXPGained = sessionXPGained + xpGained
+            dailyXPGain = dailyXPGain + xpGained
+            lastRecordedXP = currentXP
+        end
+    end
+end
+
+-- Update session Rep tracking
+function BetterExpBar:UpdateSessionRepTracking()
+    -- Check if watching a faction
+    local name, standing, minRep, maxRep, currentRep
+    if GetWatchedFactionInfo then
+        name, standing, minRep, maxRep, currentRep = GetWatchedFactionInfo()
+    elseif GetNumFactions then
+        local numFactions = GetNumFactions()
+        for i = 1, numFactions do
+            local factionName, description, standingId, barMin, barMax, barValue, atWarWith, canToggleAtWar, isHeader, isCollapsed, hasRep, isWatched = GetFactionInfo(i)
+            if isWatched then
+                name = factionName
+                standing = standingId
+                minRep = barMin
+                maxRep = barMax
+                currentRep = barValue
+                break
+            end
+        end
+    end
+    
+    if currentRep then
+        if lastRecordedRep == 0 then
+            lastRecordedRep = currentRep
+            sessionStartRep = currentRep
+        else
+            local repGained = currentRep - lastRecordedRep
+            if repGained > 0 then
+                sessionRepGained = sessionRepGained + repGained
+                dailyRepGain = dailyRepGain + repGained
+                lastRecordedRep = currentRep
+            end
+        end
+    end
+end
 
 function BetterExpBar:OnInitialize()
     -- Initialize database with defaults
     self.db = AceDB:New("BetterExpBarDB", defaults, true)
+
+    self:RegisterCustomMedia()
     
     -- Register options
     self:RegisterOptions()
@@ -173,7 +530,15 @@ end
 function BetterExpBar:OnEnable()
     self:CreateFrames()
     self:CreateTexturePreviewBars()
+    self:CreateTooltipPreviewFrames()
+    if self.db and self.db.profile and self.db.profile.tooltipPreview then
+        -- Preview visibility is session-only; always start hidden after reload.
+        self.db.profile.tooltipPreview.enabled = false
+        self.db.profile.tooltipPreview.showExp = false
+        self.db.profile.tooltipPreview.showRep = false
+    end
     self:ApplyNativeBarVisibility()
+    self:UpdateTooltipPreview()
     
     -- XP Events
     if self.db.profile.enabled then
@@ -202,12 +567,6 @@ function BetterExpBar:OnDisable()
     if largerFrame then largerFrame:Hide() end
     self:SetNativeExpBarVisibility(true)
     self:SetNativeRepBarVisibility(true)
-end
-
-function BetterExpBar:IsMaxLevel()
-    local playerLevel = UnitLevel("player") or 0
-    local maxLevel = GetMaxPlayerLevel() or 60
-    return playerLevel >= maxLevel
 end
 
 function BetterExpBar:SaveFramePosition(frame, configKey)
@@ -292,11 +651,368 @@ function BetterExpBar:UpdateAllTooltips()
     if repTooltipFrame and repTooltipText then
         self:ApplyTooltipStyle(repTooltipFrame, repTooltipText)
     end
+    self:UpdateTooltipPreview()
+end
+
+function BetterExpBar:GetTooltipPreviewText(previewType)
+    previewType = previewType or "exp"
+
+    if previewType == "rep" then
+        local cfg = self.db.profile.tooltip.repTooltip
+        local lines = {}
+        if cfg.showFactionName then
+            table.insert(lines, "|cffffff00Argent Dawn|r")
+        end
+        if cfg.showStanding then
+            table.insert(lines, "|cff00ff00Friendly|r")
+        end
+        if cfg.showCurrent then
+            table.insert(lines, "Current: |cff3399ff" .. self:FormatNumber(4200) .. "|r / " .. self:FormatNumber(12000))
+        end
+        if cfg.showRemaining then
+            table.insert(lines, "Remaining: |cffa335ee" .. self:FormatNumber(7800) .. "|r")
+        end
+        if cfg.showRepPerHour then
+            local line = "Rep/Hour: |cff00ff00+" .. self:FormatNumber(950) .. "|r"
+            if cfg.showRepPerHourPercent then
+                line = line .. " |cff00ff00(7.9%)|r"
+            end
+            table.insert(lines, line)
+        end
+        if cfg.showRepFromLastInstance then
+            local line = "Last Instance: |cff00ffff+" .. self:FormatNumber(320) .. "|r"
+            if cfg.showRepFromLastInstancePercent then
+                line = line .. " |cff00ffff(2.6%)|r"
+            end
+            table.insert(lines, line)
+        end
+        if cfg.showRepTodayTotal then
+            local line = "Today Total: |cfff0ad4e+" .. self:FormatNumber(2480) .. "|r"
+            if cfg.showRepTodayTotalPercent then
+                line = line .. " |cfff0ad4e(20.6%)|r"
+            end
+            table.insert(lines, line)
+        end
+        if #lines == 0 then
+            lines = { "Tooltip preview is empty with current settings." }
+        end
+        return table.concat(lines, "\n")
+    end
+
+    local cfg = self.db.profile.tooltip.expTooltip
+    local lines = {}
+    if cfg.showLevel then
+        table.insert(lines, "Level: |cff00ff0035|r")
+    end
+    if cfg.showCurrent then
+        table.insert(lines, "Current: |cffffff00" .. self:FormatNumber(14500) .. "|r / |cffffff00" .. self:FormatNumber(22000) .. "|r (65%)")
+    end
+    table.insert(lines, "Quest Bonus: |cff00ff00+" .. self:FormatNumber(1800) .. "|r |cff00ff00(8%)|r")
+    if cfg.showRested then
+        table.insert(lines, "Resting Bonus: |cff3399ff+" .. self:FormatNumber(3200) .. "|r |cff3399ff(15%)|r")
+    end
+    if cfg.showRemaining then
+        table.insert(lines, "Remaining: |cffa335ee" .. self:FormatNumber(7500) .. "|r")
+    end
+    if cfg.showXpPerHour then
+        local line = "XP/Hour: |cff00ff00+" .. self:FormatNumber(41000) .. "|r"
+        if cfg.showXpPerHourPercent then
+            line = line .. " |cff00ff00(186%)|r"
+        end
+        table.insert(lines, line)
+    end
+    if cfg.showXpFromLastInstance then
+        local line = "Last Instance: |cff00ffff+" .. self:FormatNumber(5200) .. "|r"
+        if cfg.showXpFromLastInstancePercent then
+            line = line .. " |cff00ffff(23%)|r"
+        end
+        table.insert(lines, line)
+    end
+    if cfg.showXpTodayTotal then
+        local line = "Today Total: |cfff0ad4e+" .. self:FormatNumber(93800) .. "|r"
+        if cfg.showXpTodayTotalPercent then
+            line = line .. " |cfff0ad4e(426%)|r"
+        end
+        table.insert(lines, line)
+    end
+    if #lines == 0 then
+        lines = { "Tooltip preview is empty with current settings." }
+    end
+    return table.concat(lines, "\n")
+end
+
+function BetterExpBar:CreateTooltipPreviewFrames()
+    if tooltipPreviewExpAnchor and tooltipPreviewRepAnchor and tooltipPreviewExpFrame and tooltipPreviewRepFrame then
+        return
+    end
+
+    tooltipPreviewExpAnchor = CreateFrame("Frame", "BetterExpBar_TooltipPreviewExpAnchor", UIParent, "BackdropTemplate")
+    tooltipPreviewExpAnchor:SetSize(280, 24)
+    tooltipPreviewExpAnchor:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        edgeSize = 10,
+    })
+    tooltipPreviewExpAnchor:SetMovable(true)
+    tooltipPreviewExpAnchor:EnableMouse(true)
+    tooltipPreviewExpAnchor:RegisterForDrag("LeftButton")
+    tooltipPreviewExpAnchor:SetFrameStrata("HIGH")
+    tooltipPreviewExpAnchor:SetScript("OnDragStart", function(frame)
+        frame:StartMoving()
+    end)
+    tooltipPreviewExpAnchor:SetScript("OnDragStop", function(frame)
+        frame:StopMovingOrSizing()
+        local point, _, relativePoint, xOfs, yOfs = frame:GetPoint()
+        BetterExpBar.db.profile.tooltipPreview.expPoint = point
+        BetterExpBar.db.profile.tooltipPreview.expRelativePoint = relativePoint
+        BetterExpBar.db.profile.tooltipPreview.expXOfs = xOfs
+        BetterExpBar.db.profile.tooltipPreview.expYOfs = yOfs
+        BetterExpBar:UpdateTooltipPreview()
+    end)
+    tooltipPreviewExpAnchor:SetScript("OnHide", function()
+        if tooltipPreviewExpFrame then tooltipPreviewExpFrame:Hide() end
+    end)
+
+    tooltipPreviewRepAnchor = CreateFrame("Frame", "BetterExpBar_TooltipPreviewRepAnchor", UIParent, "BackdropTemplate")
+    tooltipPreviewRepAnchor:SetSize(280, 24)
+    tooltipPreviewRepAnchor:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        edgeSize = 10,
+    })
+    tooltipPreviewRepAnchor:SetMovable(true)
+    tooltipPreviewRepAnchor:EnableMouse(true)
+    tooltipPreviewRepAnchor:RegisterForDrag("LeftButton")
+    tooltipPreviewRepAnchor:SetFrameStrata("HIGH")
+    tooltipPreviewRepAnchor:SetScript("OnDragStart", function(frame)
+        frame:StartMoving()
+    end)
+    tooltipPreviewRepAnchor:SetScript("OnDragStop", function(frame)
+        frame:StopMovingOrSizing()
+        local point, _, relativePoint, xOfs, yOfs = frame:GetPoint()
+        BetterExpBar.db.profile.tooltipPreview.repPoint = point
+        BetterExpBar.db.profile.tooltipPreview.repRelativePoint = relativePoint
+        BetterExpBar.db.profile.tooltipPreview.repXOfs = xOfs
+        BetterExpBar.db.profile.tooltipPreview.repYOfs = yOfs
+        BetterExpBar:UpdateTooltipPreview()
+    end)
+    tooltipPreviewRepAnchor:SetScript("OnHide", function()
+        if tooltipPreviewRepFrame then tooltipPreviewRepFrame:Hide() end
+    end)
+
+    tooltipPreviewExpBar = CreateFrame("StatusBar", nil, tooltipPreviewExpAnchor)
+    tooltipPreviewExpBar:SetPoint("TOPLEFT", tooltipPreviewExpAnchor, "TOPLEFT", 6, -5)
+    tooltipPreviewExpBar:SetPoint("BOTTOMRIGHT", tooltipPreviewExpAnchor, "BOTTOMRIGHT", -6, 5)
+    tooltipPreviewExpBar:SetMinMaxValues(0, 1)
+    tooltipPreviewExpBar:SetValue(0.65)
+
+    tooltipPreviewRepBar = CreateFrame("StatusBar", nil, tooltipPreviewRepAnchor)
+    tooltipPreviewRepBar:SetPoint("TOPLEFT", tooltipPreviewRepAnchor, "TOPLEFT", 6, -5)
+    tooltipPreviewRepBar:SetPoint("BOTTOMRIGHT", tooltipPreviewRepAnchor, "BOTTOMRIGHT", -6, 5)
+    tooltipPreviewRepBar:SetMinMaxValues(0, 1)
+    tooltipPreviewRepBar:SetValue(0.65)
+
+    tooltipPreviewExpBarText = tooltipPreviewExpBar:CreateFontString(nil, "OVERLAY")
+    tooltipPreviewExpBarText:SetPoint("CENTER", tooltipPreviewExpBar, "CENTER", 0, 0)
+    tooltipPreviewExpBarText:SetFont("Fonts\\FRIZQT__.TTF", 11, "OUTLINE")
+    tooltipPreviewExpBarText:SetText("EXP Tooltip Preview Anchor")
+
+    tooltipPreviewRepBarText = tooltipPreviewRepBar:CreateFontString(nil, "OVERLAY")
+    tooltipPreviewRepBarText:SetPoint("CENTER", tooltipPreviewRepBar, "CENTER", 0, 0)
+    tooltipPreviewRepBarText:SetFont("Fonts\\FRIZQT__.TTF", 11, "OUTLINE")
+    tooltipPreviewRepBarText:SetText("REP Tooltip Preview Anchor")
+
+    tooltipPreviewExpFrame = CreateFrame("Frame", "BetterExpBar_TooltipPreviewExp", UIParent, "BackdropTemplate")
+    tooltipPreviewExpFrame:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 12,
+    })
+    tooltipPreviewExpFrame:SetFrameStrata("TOOLTIP")
+
+    tooltipPreviewExpText = tooltipPreviewExpFrame:CreateFontString(nil, "OVERLAY")
+    tooltipPreviewExpText:SetPoint("TOPLEFT", tooltipPreviewExpFrame, "TOPLEFT", 10, -10)
+    tooltipPreviewExpText:SetJustifyH("LEFT")
+    tooltipPreviewExpText:SetJustifyV("TOP")
+    tooltipPreviewExpText:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
+
+    tooltipPreviewRepFrame = CreateFrame("Frame", "BetterExpBar_TooltipPreviewRep", UIParent, "BackdropTemplate")
+    tooltipPreviewRepFrame:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 12,
+    })
+    tooltipPreviewRepFrame:SetFrameStrata("TOOLTIP")
+
+    tooltipPreviewRepText = tooltipPreviewRepFrame:CreateFontString(nil, "OVERLAY")
+    tooltipPreviewRepText:SetPoint("TOPLEFT", tooltipPreviewRepFrame, "TOPLEFT", 10, -10)
+    tooltipPreviewRepText:SetJustifyH("LEFT")
+    tooltipPreviewRepText:SetJustifyV("TOP")
+    tooltipPreviewRepText:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
+
+    local cfg = self.db.profile.tooltipPreview
+    if cfg.expPoint and cfg.expRelativePoint then
+        tooltipPreviewExpAnchor:ClearAllPoints()
+        tooltipPreviewExpAnchor:SetPoint(cfg.expPoint, UIParent, cfg.expRelativePoint, cfg.expXOfs or 0, cfg.expYOfs or 140)
+    else
+        tooltipPreviewExpAnchor:SetPoint("CENTER", UIParent, "CENTER", 0, 140)
+    end
+
+    if cfg.repPoint and cfg.repRelativePoint then
+        tooltipPreviewRepAnchor:ClearAllPoints()
+        tooltipPreviewRepAnchor:SetPoint(cfg.repPoint, UIParent, cfg.repRelativePoint, cfg.repXOfs or 0, cfg.repYOfs or -140)
+    else
+        tooltipPreviewRepAnchor:SetPoint("CENTER", UIParent, "CENTER", 0, -140)
+    end
+end
+
+function BetterExpBar:ApplyTooltipPreviewLockState()
+    if not tooltipPreviewExpAnchor or not tooltipPreviewRepAnchor then return end
+    tooltipPreviewExpAnchor:EnableMouse(true)
+    tooltipPreviewRepAnchor:EnableMouse(true)
+    if tooltipPreviewExpBarText then
+        tooltipPreviewExpBarText:SetText("EXP Tooltip Preview Anchor (Drag)")
+    end
+    if tooltipPreviewRepBarText then
+        tooltipPreviewRepBarText:SetText("REP Tooltip Preview Anchor (Drag)")
+    end
+end
+
+function BetterExpBar:GetTooltipOffsets(tooltipType)
+    local cfg = self.db and self.db.profile and self.db.profile.tooltip
+    if not cfg then
+        return 0, 10
+    end
+
+    local legacyY = cfg.offsetY or 10
+    if tooltipType == "rep" then
+        return cfg.repOffsetX or 0, cfg.repOffsetY or legacyY
+    end
+    return cfg.expOffsetX or 0, cfg.expOffsetY or legacyY
+end
+
+function BetterExpBar:RefreshFontPreviews()
+    if not self.db or not self.db.profile then return end
+
+    local barFontChoice = self.db.profile.barStyle.linkedFontFace
+    if not self.db.profile.barStyle.barsLinked then
+        barFontChoice = self.db.profile.expBar.fontFace or barFontChoice
+    end
+
+    local barFont = self:GetSafeFont(barFontChoice or "Fonts\\FRIZQT__.TTF")
+    local tooltipFont = self:GetSafeFont(self.db.profile.tooltip.fontFace or "Fonts\\FRIZQT__.TTF")
+    local tooltipSize = self.db.profile.tooltip.fontSize or 12
+
+    if tooltipPreviewExpBarText then
+        tooltipPreviewExpBarText:SetFont(barFont, 11, "OUTLINE")
+        tooltipPreviewExpBarText:SetText("EXP Tooltip Preview Anchor (Drag)")
+    end
+
+    if tooltipPreviewRepBarText then
+        tooltipPreviewRepBarText:SetFont(barFont, 11, "OUTLINE")
+        tooltipPreviewRepBarText:SetText("REP Tooltip Preview Anchor (Drag)")
+    end
+
+    if tooltipPreviewExpText then
+        tooltipPreviewExpText:SetFont(tooltipFont, tooltipSize, "OUTLINE")
+    end
+
+    if tooltipPreviewRepText then
+        tooltipPreviewRepText:SetFont(tooltipFont, tooltipSize, "OUTLINE")
+    end
+end
+
+function BetterExpBar:UpdateTooltipPreview()
+    if not self.db or not self.db.profile or not self.db.profile.tooltipPreview then return end
+    local previewConfig = self.db.profile.tooltipPreview
+
+    if previewConfig.showExp == nil then previewConfig.showExp = true end
+    if previewConfig.showRep == nil then previewConfig.showRep = true end
+    previewConfig.locked = false
+    if not previewConfig.expPoint and previewConfig.point then
+        previewConfig.expPoint = previewConfig.point
+        previewConfig.expRelativePoint = previewConfig.relativePoint
+        previewConfig.expXOfs = previewConfig.xOfs
+        previewConfig.expYOfs = previewConfig.yOfs
+    end
+    if not previewConfig.repPoint and previewConfig.point then
+        previewConfig.repPoint = previewConfig.point
+        previewConfig.repRelativePoint = previewConfig.relativePoint
+        previewConfig.repXOfs = previewConfig.xOfs
+        previewConfig.repYOfs = previewConfig.yOfs
+    end
+
+    if not previewConfig.enabled then
+        if tooltipPreviewExpFrame then tooltipPreviewExpFrame:Hide() end
+        if tooltipPreviewRepFrame then tooltipPreviewRepFrame:Hide() end
+        if tooltipPreviewExpAnchor then tooltipPreviewExpAnchor:Hide() end
+        if tooltipPreviewRepAnchor then tooltipPreviewRepAnchor:Hide() end
+        return
+    end
+
+    self:CreateTooltipPreviewFrames()
+
+    local expColor = self.db.profile.colors.exp
+    tooltipPreviewExpBar:SetStatusBarTexture(self.db.profile.expBar.texture or "Interface\\TargetingFrame\\UI-StatusBar")
+    tooltipPreviewExpBar:SetStatusBarColor(expColor.r, expColor.g, expColor.b, expColor.a or 1)
+
+    local repColor = self:GetFactionColor(5)
+    tooltipPreviewRepBar:SetStatusBarTexture(self.db.profile.repBar.texture or "Interface\\TargetingFrame\\UI-StatusBar")
+    tooltipPreviewRepBar:SetStatusBarColor(repColor.r, repColor.g, repColor.b, repColor.a or 1)
+
+    local textColor = self.db.profile.tooltip.textColor
+    tooltipPreviewExpBarText:SetTextColor(textColor.r, textColor.g, textColor.b, textColor.a)
+    tooltipPreviewRepBarText:SetTextColor(textColor.r, textColor.g, textColor.b, textColor.a)
+
+    local expOffsetX, expOffsetY = self:GetTooltipOffsets("exp")
+    local repOffsetX, repOffsetY = self:GetTooltipOffsets("rep")
+
+    self:ApplyTooltipStyle(tooltipPreviewExpFrame, tooltipPreviewExpText)
+    tooltipPreviewExpText:SetText(self:GetTooltipPreviewText("exp"))
+    tooltipPreviewExpFrame:SetSize(tooltipPreviewExpText:GetStringWidth() + 20, tooltipPreviewExpText:GetStringHeight() + 20)
+    tooltipPreviewExpFrame:ClearAllPoints()
+    tooltipPreviewExpFrame:SetPoint("BOTTOM", tooltipPreviewExpAnchor, "TOP", expOffsetX, expOffsetY)
+
+    self:ApplyTooltipStyle(tooltipPreviewRepFrame, tooltipPreviewRepText)
+    tooltipPreviewRepText:SetText(self:GetTooltipPreviewText("rep"))
+    tooltipPreviewRepFrame:SetSize(tooltipPreviewRepText:GetStringWidth() + 20, tooltipPreviewRepText:GetStringHeight() + 20)
+    tooltipPreviewRepFrame:ClearAllPoints()
+    tooltipPreviewRepFrame:SetPoint("BOTTOM", tooltipPreviewRepAnchor, "TOP", repOffsetX, repOffsetY)
+
+    self:ApplyTooltipPreviewLockState()
+    self:RefreshFontPreviews()
+    if previewConfig.showExp then
+        tooltipPreviewExpAnchor:Show()
+        tooltipPreviewExpFrame:Show()
+    else
+        tooltipPreviewExpAnchor:Hide()
+        tooltipPreviewExpFrame:Hide()
+    end
+    if previewConfig.showRep then
+        tooltipPreviewRepAnchor:Show()
+        tooltipPreviewRepFrame:Show()
+    else
+        tooltipPreviewRepAnchor:Hide()
+        tooltipPreviewRepFrame:Hide()
+    end
+end
+
+function BetterExpBar:AnchorTooltipFrame(frame, fallbackBarFrame, tooltipType)
+    if not frame then return end
+    frame:ClearAllPoints()
+    local xOff, yOff = self:GetTooltipOffsets(tooltipType)
+
+    -- Use type-specific preview anchor if it exists.
+    if tooltipType == "rep" and tooltipPreviewRepAnchor then
+        frame:SetPoint("BOTTOM", tooltipPreviewRepAnchor, "TOP", xOff, yOff)
+    elseif tooltipType == "exp" and tooltipPreviewExpAnchor then
+        frame:SetPoint("BOTTOM", tooltipPreviewExpAnchor, "TOP", xOff, yOff)
+    elseif fallbackBarFrame then
+        frame:SetPoint("BOTTOM", fallbackBarFrame, "TOP", xOff, yOff)
+    end
 end
 
 function BetterExpBar:SynchronizeBarStyles()
-    if not self.db.profile.barStyle.synchronizeStyle then return end
-    
     if expBarFrame and largerFrame then
         self:ApplyBarStyle(largerFrame, "largerFrame")
         self:ApplyBarStyle(expBarFrame, "expBar")
@@ -333,14 +1049,16 @@ function BetterExpBar:FormatNumber(num)
     -- Attempt to get formatting preferences
     local useCommon = false
     local useVerbose = false
+    local useCommaFormat = false
     
     if self.db and self.db.profile and self.db.profile.expDisplay then
         useCommon = self.db.profile.expDisplay.useCommon or false
         useVerbose = self.db.profile.expDisplay.useVerbose or false
+        useCommaFormat = self.db.profile.expDisplay.useCommaFormat or false
     end
     
-    -- If both are false, default to common formatting
-    if not useCommon and not useVerbose then
+    -- If any format is enabled, use it; otherwise default to common
+    if not useCommon and not useVerbose and not useCommaFormat then
         useCommon = true
     end
     
@@ -374,6 +1092,23 @@ function BetterExpBar:FormatNumber(num)
         else
             return tostring(num)
         end
+    end
+    
+    -- Comma-separated format: 40,393
+    if useCommaFormat then
+        local intNum = math.floor(num)
+        local str = tostring(intNum)
+        local result = ""
+        local count = 0
+        for i = #str, 1, -1 do
+            if count == 3 then
+                result = "," .. result
+                count = 0
+            end
+            result = string.sub(str, i, i) .. result
+            count = count + 1
+        end
+        return result
     end
     
     -- Fallback: plain number
@@ -453,6 +1188,33 @@ function BetterExpBar:GetBonusReputation()
     return totalBonusRep
 end
 
+function BetterExpBar:GetWatchedFactionData()
+    local name, standing, minRep, maxRep, currentRep, factionID
+
+    -- Prefer manual scan for the watched faction for accuracy across clients.
+    if GetNumFactions and GetFactionInfo then
+        local numFactions = GetNumFactions()
+        for i = 1, numFactions do
+            local factionName, _, standingId, barMin, barMax, barValue, _, _, _, _, _, isWatched = GetFactionInfo(i)
+            if factionName and isWatched then
+                name = factionName
+                standing = standingId
+                minRep = barMin
+                maxRep = barMax
+                currentRep = barValue
+                factionID = i
+                break
+            end
+        end
+    end
+
+    if not name and GetWatchedFactionInfo then
+        name, standing, minRep, maxRep, currentRep, factionID = GetWatchedFactionInfo()
+    end
+
+    return name, standing, minRep, maxRep, currentRep, factionID
+end
+
 function BetterExpBar:UpdateBarTextSize(barFrame, fontSize)
     if barFrame == expBarFrame and expText then
         local fontFace = self.db.profile.expBar.fontFace or "Fonts\\FRIZQT__.TTF"
@@ -509,9 +1271,21 @@ function BetterExpBar:SynchronizeBarDimensions()
     if not self.db.profile.barStyle.barsLinked then return end
     
     if expBarFrame and repBarFrame then
-        local expWidth, expHeight = expBarFrame:GetSize()
-        -- Force repBarFrame to match expBarFrame exactly
-        repBarFrame:SetSize(expWidth, expHeight)
+        local referenceFrame = expBarFrame
+        if (self.db.profile.barStyle.barOrder or "exp") == "rep" then
+            referenceFrame = repBarFrame
+        end
+
+        local refWidth, refHeight = referenceFrame:GetSize()
+        refWidth = math.max(refWidth or 40, 40)
+        refHeight = math.max(refHeight or 10, 10)
+
+        expBarFrame:SetSize(refWidth, refHeight)
+        repBarFrame:SetSize(refWidth, refHeight)
+
+        if largerFrame then
+            largerFrame:SetSize(refWidth + 10, refHeight + 10)
+        end
     end
 end
 
@@ -536,11 +1310,7 @@ function BetterExpBar:UpdateLinkedBars()
     if not expBarFrame or not repBarFrame or not largerFrame then return end
     
     local barOrder = self.db.profile.barStyle.barOrder or "exp"
-    local expHeight = expBarFrame:GetHeight()
-    
-    -- Sync dimensions
-    local expWidth = expBarFrame:GetWidth()
-    repBarFrame:SetSize(expWidth, expHeight)
+    self:SynchronizeBarDimensions()
     
     -- Always center expBarFrame inside largerFrame
     expBarFrame:ClearAllPoints()
@@ -753,7 +1523,8 @@ function BetterExpBar:CreateFrames()
             edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
             edgeSize = 12,
         })
-        tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, self.db.profile.tooltip.offsetY)
+        local expOffsetX, expOffsetY = self:GetTooltipOffsets("exp")
+        tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", expOffsetX, expOffsetY)
         tooltipFrame:SetFrameStrata("TOOLTIP")
         tooltipFrame:Hide()
 
@@ -768,12 +1539,21 @@ function BetterExpBar:CreateFrames()
         -- Apply tooltip styling
         self:ApplyTooltipStyle(tooltipFrame, tooltipText)
 
+        tooltipFrame.updateElapsed = 0
+        tooltipFrame:SetScript("OnUpdate", function(self, elapsed)
+            if not self:IsShown() then return end
+            self.updateElapsed = (self.updateElapsed or 0) + elapsed
+            if self.updateElapsed >= 1 then
+                self.updateElapsed = 0
+                BetterExpBar:UpdateTooltipText()
+            end
+        end)
+
         -- Setup frame interactions
         expBarFrame:SetScript("OnEnter", function(self)
-            if BetterExpBar.db.profile.tooltip.enabled then
+            if BetterExpBar.db.profile.tooltip.enabled and not BetterExpBar.db.profile.tooltipPreview.enabled then
                 BetterExpBar:UpdateTooltipText()
-                tooltipFrame:ClearAllPoints()
-                tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, BetterExpBar.db.profile.tooltip.offsetY)
+                BetterExpBar:AnchorTooltipFrame(tooltipFrame, expBarFrame, "exp")
                 tooltipFrame:Show()
             end
         end)
@@ -917,7 +1697,8 @@ function BetterExpBar:CreateRepBar()
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
         edgeSize = 12,
     })
-    repTooltipFrame:SetPoint("BOTTOM", repBarFrame, "TOP", 0, self.db.profile.tooltip.offsetY)
+    local repOffsetX, repOffsetY = self:GetTooltipOffsets("rep")
+    repTooltipFrame:SetPoint("BOTTOM", repBarFrame, "TOP", repOffsetX, repOffsetY)
     repTooltipFrame:SetFrameStrata("TOOLTIP")
     repTooltipFrame:Hide()
 
@@ -931,6 +1712,16 @@ function BetterExpBar:CreateRepBar()
     
     -- Apply tooltip styling
     self:ApplyTooltipStyle(repTooltipFrame, repTooltipText)
+
+    repTooltipFrame.updateElapsed = 0
+    repTooltipFrame:SetScript("OnUpdate", function(self, elapsed)
+        if not self:IsShown() then return end
+        self.updateElapsed = (self.updateElapsed or 0) + elapsed
+        if self.updateElapsed >= 1 then
+            self.updateElapsed = 0
+            BetterExpBar:UpdateRepTooltip()
+        end
+    end)
 
     -- Resize handle
     repResizeHandle = CreateFrame("Frame", nil, repBarFrame)
@@ -984,10 +1775,9 @@ function BetterExpBar:CreateRepBar()
 
     -- Tooltip handlers
     repBarFrame:SetScript("OnEnter", function()
-        if BetterExpBar.db.profile.tooltip.enabled then
+        if BetterExpBar.db.profile.tooltip.enabled and not BetterExpBar.db.profile.tooltipPreview.enabled then
             BetterExpBar:UpdateRepTooltip()
-            repTooltipFrame:ClearAllPoints()
-            repTooltipFrame:SetPoint("BOTTOM", repBarFrame, "TOP", 0, BetterExpBar.db.profile.tooltip.offsetY)
+            BetterExpBar:AnchorTooltipFrame(repTooltipFrame, repBarFrame, "rep")
             repTooltipFrame:Show()
         end
     end)
@@ -1025,6 +1815,11 @@ function BetterExpBar:CreateRepBar()
 end
 
 function BetterExpBar:UpdateTooltipText()
+    if not tooltipText or not tooltipFrame then return end
+    
+    -- Update session tracking
+    self:UpdateSessionXPTracking()
+    
     local currentXP = UnitXP and UnitXP("player") or 0
     local maxXP = UnitXPMax and UnitXPMax("player") or 1
     local restedXP = GetXPExhaustion and (GetXPExhaustion() or 0) or 0
@@ -1079,9 +1874,43 @@ function BetterExpBar:UpdateTooltipText()
         table.insert(tooltipLines, string.format("Remaining: |cffa335ee%s|r", 
             self:FormatNumber(remainingXP)))
     end
+    
+    -- Add NovaInstanceTracker stats if any are enabled
+    if tooltipConfig.showXpPerHour or tooltipConfig.showXpFromLastInstance or tooltipConfig.showXpTodayTotal then
+        table.insert(tooltipLines, "")  -- Separator line
+        
+        local xpPerHour, xpFromLastInstance, xpTodayTotal = self:GetNITXPStats()
+        
+        if tooltipConfig.showXpPerHour then
+            local line = string.format("XP/Hour: |cffa335ee%s|r", self:FormatNumber(xpPerHour))
+            if tooltipConfig.showXpPerHourPercent and maxXP > 0 then
+                local percent = math.floor((xpPerHour / maxXP) * 100 + 0.5)
+                line = line .. string.format(" |cffa335ee(%d%%)|r", percent)
+            end
+            table.insert(tooltipLines, line)
+        end
+        
+        if tooltipConfig.showXpFromLastInstance then
+            local line = string.format("Instance XP: |cff00ff00+%s|r", self:FormatNumber(xpFromLastInstance))
+            if tooltipConfig.showXpFromLastInstancePercent and maxXP > 0 then
+                local percent = math.floor((xpFromLastInstance / maxXP) * 100 + 0.5)
+                line = line .. string.format(" |cff00ff00(%d%%)|r", percent)
+            end
+            table.insert(tooltipLines, line)
+        end
+        
+        if tooltipConfig.showXpTodayTotal then
+            table.insert(tooltipLines, string.format("Today Total: |cfff0ad4e+%s|r", 
+                self:FormatNumber(xpTodayTotal)))
+        end
+    end
 
     tooltipText:SetText(table.concat(tooltipLines, "\n"))
     tooltipFrame:SetSize(tooltipText:GetStringWidth() + 20, tooltipText:GetStringHeight() + 20)
+
+    if self.db.profile.tooltipPreview.enabled then
+        self:UpdateTooltipPreview()
+    end
 end
 
 function BetterExpBar:UpdateLargerFrame()
@@ -1221,31 +2050,7 @@ function BetterExpBar:UpdateRepBar()
     end
     repText:SetFont(fontFace, fontSize, "OUTLINE")
     
-    local name, standing, minRep, maxRep, currentRep, factionID
-    
-    -- Try GetWatchedFactionInfo first (Retail/Modern WoW)
-    if GetWatchedFactionInfo then
-        name, standing, minRep, maxRep, currentRep, factionID = GetWatchedFactionInfo()
-    end
-    
-    -- If that didn't work, manually search for the watched faction (Classic/Anniversary)
-    if not name and GetNumFactions then
-        local numFactions = GetNumFactions()
-        for i = 1, numFactions do
-            local factionName, description, standingId, barMin, barMax, barValue, atWarWith, canToggleAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, factionId, hasBonusRepGain, canBeLFGBonus = GetFactionInfo(i)
-            
-            -- Check if this faction is being watched
-            if factionName and isWatched then
-                name = factionName
-                standing = standingId
-                minRep = barMin
-                maxRep = barMax
-                currentRep = barValue
-                factionID = i
-                break
-            end
-        end
-    end
+    local name, standing, minRep, maxRep, currentRep, factionID = self:GetWatchedFactionData()
     
     -- Ensure we have valid data before proceeding
     if not name or not currentRep or not minRep or not maxRep then
@@ -1350,31 +2155,10 @@ end
 function BetterExpBar:UpdateRepTooltip()
     if not repTooltipText then return end
     
-    local name, standing, minRep, maxRep, currentRep, factionID
+    -- Update session tracking
+    self:UpdateSessionRepTracking()
     
-    -- Try GetWatchedFactionInfo first (Retail/Modern WoW)
-    if GetWatchedFactionInfo then
-        name, standing, minRep, maxRep, currentRep, factionID = GetWatchedFactionInfo()
-    end
-    
-    -- If that didn't work, manually search for the watched faction (Classic/Anniversary)
-    if not name and GetNumFactions then
-        local numFactions = GetNumFactions()
-        for i = 1, numFactions do
-            local factionName, description, standingId, barMin, barMax, barValue, atWarWith, canToggleAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, factionId, hasBonusRepGain, canBeLFGBonus = GetFactionInfo(i)
-            
-            -- Check if this faction is being watched
-            if factionName and isWatched then
-                name = factionName
-                standing = standingId
-                minRep = barMin
-                maxRep = barMax
-                currentRep = barValue
-                factionID = i
-                break
-            end
-        end
-    end
+    local name, standing, minRep, maxRep, currentRep, factionID = self:GetWatchedFactionData()
     
     -- Ensure we have valid data before proceeding
     if not name or not currentRep or not minRep or not maxRep then
@@ -1418,12 +2202,46 @@ function BetterExpBar:UpdateRepTooltip()
                 whiteColor, remainingValueColor, self:FormatNumber(remainingValue)))
         end
         
+        -- Add NovaInstanceTracker stats if any are enabled
+        if tooltipConfig.showRepPerHour or tooltipConfig.showRepFromLastInstance or tooltipConfig.showRepTodayTotal then
+            table.insert(tooltipLines, "")  -- Separator line
+            
+            local repPerHour, repFromLastInstance, repTodayTotal = self:GetNITRepStats()
+            
+            if tooltipConfig.showRepPerHour then
+                local line = string.format("Rep/Hour: |cffa335ee%s|r", self:FormatNumber(repPerHour))
+                if tooltipConfig.showRepPerHourPercent and maxValue > 0 then
+                    local percent = math.floor((repPerHour / maxValue) * 100 + 0.5)
+                    line = line .. string.format(" |cffa335ee(%d%%)|r", percent)
+                end
+                table.insert(tooltipLines, line)
+            end
+            
+            if tooltipConfig.showRepFromLastInstance then
+                local line = string.format("Instance Rep: |cff00ff00+%s|r", self:FormatNumber(repFromLastInstance))
+                if tooltipConfig.showRepFromLastInstancePercent and maxValue > 0 then
+                    local percent = math.floor((repFromLastInstance / maxValue) * 100 + 0.5)
+                    line = line .. string.format(" |cff00ff00(%d%%)|r", percent)
+                end
+                table.insert(tooltipLines, line)
+            end
+            
+            if tooltipConfig.showRepTodayTotal then
+                table.insert(tooltipLines, string.format("Today Total: |cfff0ad4e+%s|r", 
+                    self:FormatNumber(repTodayTotal)))
+            end
+        end
+        
         repTooltipText:SetText(table.concat(tooltipLines, "\n"))
         
         repTooltipFrame:SetSize(repTooltipText:GetStringWidth() + 20, repTooltipText:GetStringHeight() + 20)
     else
         repTooltipText:SetText("No faction is currently being tracked.")
         repTooltipFrame:SetSize(repTooltipText:GetStringWidth() + 20, repTooltipText:GetStringHeight() + 20)
+    end
+
+    if self.db.profile.tooltipPreview.enabled then
+        self:UpdateTooltipPreview()
     end
 end
 
@@ -1487,6 +2305,22 @@ function BetterExpBar:OnEnteringWorld()
     if self.db.profile.repBarEnabled and repBarInner then
         self:UpdateRepBar()
     end
+    
+    -- Check if NIT is available (in case it loaded after us)
+    self:IsNITAvailable()
+    
+    -- Initialize session tracking on login
+    sessionStartTime = GetServerTime()
+    sessionStartXP = UnitXP("player") or 0
+    lastRecordedXP = sessionStartXP
+    
+    -- Check if it's a new day and reset daily counters if needed
+    local currentTime = date("*t", GetServerTime())
+    if dailyStartTime.year ~= currentTime.year or dailyStartTime.month ~= currentTime.month or dailyStartTime.day ~= currentTime.day then
+        dailyXPGain = 0
+        dailyRepGain = 0
+        dailyStartTime = currentTime
+    end
 end
 
 function BetterExpBar:OnLevelUp()
@@ -1507,19 +2341,62 @@ end
 
 function BetterExpBar:ResetTooltipPositions()
     local tooltipDefaults = defaults.profile.tooltip
+    local previewDefaults = defaults.profile.tooltipPreview
     local tooltipConfig = self.db.profile.tooltip
+    local previewConfig = self.db.profile.tooltipPreview
+    local expPreviewX, expPreviewY = previewDefaults.expXOfs, previewDefaults.expYOfs
+    local repPreviewX, repPreviewY = previewDefaults.repXOfs, previewDefaults.repYOfs
 
-    tooltipConfig.offsetY = tooltipDefaults.offsetY
+    tooltipConfig.expOffsetX = tooltipDefaults.expOffsetX
+    tooltipConfig.expOffsetY = tooltipDefaults.expOffsetY
+    tooltipConfig.repOffsetX = tooltipDefaults.repOffsetX
+    tooltipConfig.repOffsetY = tooltipDefaults.repOffsetY
+
+    -- Reset preview anchors to the visual default: centered slightly above each bar.
+    if expBarFrame and expBarFrame.GetCenter then
+        local expCenterX, expCenterY = expBarFrame:GetCenter()
+        if expCenterX and expCenterY then
+            expPreviewX = expCenterX - (UIParent:GetWidth() / 2)
+            expPreviewY = expCenterY - (UIParent:GetHeight() / 2) + (expBarFrame:GetHeight() / 2) + 10
+        end
+    end
+
+    if repBarFrame and repBarFrame.GetCenter then
+        local repCenterX, repCenterY = repBarFrame:GetCenter()
+        if repCenterX and repCenterY then
+            repPreviewX = repCenterX - (UIParent:GetWidth() / 2)
+            repPreviewY = repCenterY - (UIParent:GetHeight() / 2) + (repBarFrame:GetHeight() / 2) + 10
+        end
+    end
+
+    previewConfig.expPoint = previewDefaults.expPoint
+    previewConfig.expRelativePoint = previewDefaults.expRelativePoint
+    previewConfig.expXOfs = expPreviewX
+    previewConfig.expYOfs = expPreviewY
+    previewConfig.repPoint = previewDefaults.repPoint
+    previewConfig.repRelativePoint = previewDefaults.repRelativePoint
+    previewConfig.repXOfs = repPreviewX
+    previewConfig.repYOfs = repPreviewY
+
+    if tooltipPreviewExpAnchor then
+        tooltipPreviewExpAnchor:ClearAllPoints()
+        tooltipPreviewExpAnchor:SetPoint(previewConfig.expPoint, UIParent, previewConfig.expRelativePoint, previewConfig.expXOfs, previewConfig.expYOfs)
+    end
+
+    if tooltipPreviewRepAnchor then
+        tooltipPreviewRepAnchor:ClearAllPoints()
+        tooltipPreviewRepAnchor:SetPoint(previewConfig.repPoint, UIParent, previewConfig.repRelativePoint, previewConfig.repXOfs, previewConfig.repYOfs)
+    end
 
     if tooltipFrame and expBarFrame then
-        tooltipFrame:ClearAllPoints()
-        tooltipFrame:SetPoint("BOTTOM", expBarFrame, "TOP", 0, tooltipConfig.offsetY)
+        self:AnchorTooltipFrame(tooltipFrame, expBarFrame, "exp")
     end
 
     if repTooltipFrame and repBarFrame then
-        repTooltipFrame:ClearAllPoints()
-        repTooltipFrame:SetPoint("BOTTOM", repBarFrame, "TOP", 0, tooltipConfig.offsetY)
+        self:AnchorTooltipFrame(repTooltipFrame, repBarFrame, "rep")
     end
+
+    self:UpdateTooltipPreview()
 end
 
 -- Slash command handlers
@@ -1770,6 +2647,29 @@ function BetterExpBar:SlashCommand(input)
         else
             self:Print("LibDBIcon not available")
         end
+    elseif command == "test" then
+        if expBarContainer then
+            -- Pulse effect on EXP bar
+            local expBackdrop = expBarContainer:GetBackdrop()
+            if expBackdrop then
+                expBarContainer:SetBackdropBorderColor(0.3, 1, 0.3, 1)
+                C_Timer.After(0.5, function()
+                    expBarContainer:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+                end)
+            end
+            self:Print("Test pulse activated on Experience bar")
+        end
+        if repBarFrame then
+            -- Pulse effect on REP bar
+            local repBackdrop = repBarFrame:GetBackdrop()
+            if repBackdrop then
+                repBarFrame:SetBackdropBorderColor(0.3, 1, 0.3, 1)
+                C_Timer.After(0.5, function()
+                    repBarFrame:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+                end)
+            end
+            self:Print("Test pulse activated on Reputation bar")
+        end
     else
         self:Print("Usage:")
         self:Print("/beb reset - Reset the position of bars")
@@ -1778,6 +2678,7 @@ function BetterExpBar:SlashCommand(input)
         self:Print("/beb togglerep - Toggle reputation bar")
         self:Print("/beb minimap - Toggle minimap button")
         self:Print("/beb config - Open configuration options")
+        self:Print("/beb test - Test glow effect on bars")
     end
 end
 
@@ -1878,21 +2779,29 @@ function BetterExpBar:RegisterOptions()
                         end,
                         order = 6,
                     },
-                    displayHeader = {
-                        type = "header",
-                        name = "Display",
-                        order = 6.5,
+                },
+            },
+            appearance = {
+                name = "Appearance",
+                type = "group",
+                order = 1.5,
+                args = {
+                    appearanceIntro = {
+                        type = "description",
+                        name = "Visual customization options for bar colors and fonts.",
+                        order = 0.5,
                     },
                     colorHeader = {
                         type = "header",
                         name = "Bar Colors",
-                        order = 7,
+                        order = 1,
                     },
                     exp = {
                         type = "color",
                         name = "Experience Bar Color",
                         desc = "Color of the experience bar",
                         hasAlpha = true,
+                        disabled = function() return BetterExpBar:IsMaxLevel() end,
                         get = function()
                             local c = self.db.profile.colors.exp
                             return c.r, c.g, c.b, c.a
@@ -1906,13 +2815,14 @@ function BetterExpBar:RegisterOptions()
                                 expBarFrame:SetAlpha(a)
                             end
                         end,
-                        order = 8,
+                        order = 2,
                     },
                     rested = {
                         type = "color",
                         name = "Rested Bar Color",
                         desc = "Color of the rested experience bar",
                         hasAlpha = true,
+                        disabled = function() return BetterExpBar:IsMaxLevel() end,
                         get = function()
                             local c = self.db.profile.colors.rested
                             return c.r, c.g, c.b, c.a
@@ -1923,13 +2833,14 @@ function BetterExpBar:RegisterOptions()
                                 restedBar:SetStatusBarColor(r, g, b, a)
                             end
                         end,
-                        order = 9,
+                        order = 3,
                     },
                     questXPColor = {
                         type = "color",
                         name = "Quest XP Color",
                         desc = "Color of the predicted quest XP bar",
                         hasAlpha = true,
+                        disabled = function() return BetterExpBar:IsMaxLevel() end,
                         get = function()
                             local c = self.db.profile.colors.questXP
                             return c.r, c.g, c.b, c.a
@@ -1940,12 +2851,12 @@ function BetterExpBar:RegisterOptions()
                                 questXPBar:SetStatusBarColor(r, g, b, a)
                             end
                         end,
-                        order = 10,
+                        order = 4,
                     },
-                    repHeader = {
+                    repColorHeader = {
                         type = "header",
                         name = "Reputation",
-                        order = 12,
+                        order = 5,
                     },
                     bonusRepColor = {
                         type = "color",
@@ -1962,101 +2873,47 @@ function BetterExpBar:RegisterOptions()
                                 bonusRepBar:SetStatusBarColor(r, g, b, a)
                             end
                         end,
-                        order = 15,
+                        order = 6,
                     },
-                    appearanceHeader = {
+                    fontHeader = {
                         type = "header",
-                        name = "Appearance (Both Bars)",
-                        order = 16,
+                        name = "Fonts",
+                        order = 7,
                     },
                     barFont = {
                         type = "select",
                         name = "Bar Font",
-                        desc = "To be implemented in the close future. |cFF00FF00I WAS NOT PREPARED|r",
+                        desc = "Choose the shared font used by both bars from your custom media and LibSharedMedia libraries. Live preview updates immediately.",
                         values = function()
-                            if LSM then
-                                return LSM:List("font")
-                            else
-                                return { ["Fonts\\FRIZQT__.TTF"] = "FRIZQT__" }
-                            end
+                            return BetterExpBar:GetMediaOptions("font", { ["Fonts\\FRIZQT__.TTF"] = "Friz Quadrata TT" })
                         end,
                         get = function() return BetterExpBar.db.profile.barStyle.linkedFontFace or "Fonts\\FRIZQT__.TTF" end,
                         set = function(_, value)
                             BetterExpBar.db.profile.barStyle.linkedFontFace = value
                             BetterExpBar.db.profile.expBar.fontFace = value
                             BetterExpBar.db.profile.repBar.fontFace = value
-                            
-                            -- Update fonts directly
-                            if expText then
-                                local fontFace = BetterExpBar:GetSafeFont(value)
-                                expText:SetFont(fontFace, BetterExpBar.db.profile.expBar.textSize or 12, "OUTLINE")
-                            end
-                            if repText then
-                                local fontFace = BetterExpBar:GetSafeFont(value)
-                                repText:SetFont(fontFace, BetterExpBar.db.profile.repBar.textSize or 12, "OUTLINE")
-                            end
-                            
-                            -- Update tooltips
-                            if tooltipFrame and tooltipText then
-                                BetterExpBar:ApplyTooltipStyle(tooltipFrame, tooltipText)
-                            end
-                            if repTooltipFrame and repTooltipText then
-                                BetterExpBar:ApplyTooltipStyle(repTooltipFrame, repTooltipText)
-                            end
-                        end,
-                        order = 17,
-                        disabled = true,
-                    },
-                    texturePreview = {
-                        type = "description",
-                        name = function()
-                            local texture = BetterExpBar.db.profile.barStyle.linkedTexture
-                            if type(texture) ~= "string" then texture = "Interface\\TargetingFrame\\UI-StatusBar" end
-                            local textureName = texture:match("([^\\]+)$") or texture
-                            return "Texture Preview: |cFF00FF00" .. textureName .. "|r"
-                        end,
-                        order = 17.5,
-                    },
-                    barTexture = {
-                        type = "select",
-                        name = "Bar Texture",
-                        desc = "To be implemented in the close future. |cFF00FF00I WAS NOT PREPARED|r",
-                        values = function()
-                            if LSM then
-                                return LSM:List("statusbar")
-                            else
-                                return { ["Interface\\TargetingFrame\\UI-StatusBar"] = "UI-StatusBar" }
-                            end
-                        end,
-                        get = function() return BetterExpBar.db.profile.barStyle.linkedTexture or "Interface\\TargetingFrame\\UI-StatusBar" end,
-                        set = function(_, value)
-                            BetterExpBar.db.profile.barStyle.linkedTexture = value
-                            BetterExpBar.db.profile.expBar.texture = value
-                            BetterExpBar.db.profile.repBar.texture = value
-                            
-                            -- Apply texture to all bars
-                            if expBarInner then
-                                expBarInner:SetStatusBarTexture(value)
-                            end
-                            if questXPBar then
-                                questXPBar:SetStatusBarTexture(value)
-                            end
-                            if restedBar then
-                                restedBar:SetStatusBarTexture(value)
-                            end
-                            if repBarInner then
-                                repBarInner:SetStatusBarTexture(value)
-                            end
-                            if bonusRepBar then
-                                bonusRepBar:SetStatusBarTexture(value)
-                            end
-                            
-                            -- Refresh both bars to reapply colors and styling
+
                             BetterExpBar:UpdateExpBar()
                             BetterExpBar:UpdateRepBar()
+                            BetterExpBar:UpdateAllTooltips()
+                            BetterExpBar:UpdateTooltipPreview()
                         end,
-                        order = 18,
-                        disabled = true,
+                        order = 8,
+                    },
+                    tooltipFont = {
+                        type = "select",
+                        name = "Tooltip Font",
+                        desc = "Choose the font used by experience and reputation tooltips. Live preview updates immediately.",
+                        values = function()
+                            return BetterExpBar:GetMediaOptions("font", { ["Fonts\\FRIZQT__.TTF"] = "Friz Quadrata TT" })
+                        end,
+                        get = function() return BetterExpBar.db.profile.tooltip.fontFace or "Fonts\\FRIZQT__.TTF" end,
+                        set = function(_, value)
+                            BetterExpBar.db.profile.tooltip.fontFace = value
+                            BetterExpBar:UpdateAllTooltips()
+                            BetterExpBar:UpdateTooltipPreview()
+                        end,
+                        order = 9,
                     },
                 },
             },
@@ -2065,17 +2922,78 @@ function BetterExpBar:RegisterOptions()
                 type = "group",
                 order = 2,
                 args = {
-                    synchronizeStyle = {
-                        type = "toggle",
-                        name = "Synchronize Style",
-                        desc = "To be implemented in the close future. |cFF00FF00I WAS NOT PREPARED|r",
-                        get = function() return self.db.profile.barStyle.synchronizeStyle end,
-                        set = function(_, value)
-                            self.db.profile.barStyle.synchronizeStyle = value
-                            BetterExpBar:SynchronizeBarStyles()
-                        end,
+                    dimensionsHeader = {
+                        type = "header",
+                        name = "Bar Dimensions",
                         order = 1,
-                        disabled = true,
+                    },
+                    expWidth = {
+                        type = "range",
+                        name = "EXP Width",
+                        desc = "Width of the experience bar (click value to type).",
+                        min = 100, max = 1500, step = 10,
+                        disabled = function() return BetterExpBar:IsMaxLevel() end,
+                        get = function() return self.db.profile.expBar.width or 1024 end,
+                        set = function(_, value)
+                            self.db.profile.expBar.width = value
+                            if expBarFrame then expBarFrame:SetWidth(value) end
+                            if largerFrame then largerFrame:SetWidth(value + 10) end
+                            if self.db.profile.barStyle.barsLinked then
+                                BetterExpBar:SynchronizeBarDimensions()
+                                BetterExpBar:UpdateLinkedBars()
+                            end
+                        end,
+                        order = 1.1,
+                    },
+                    expHeight = {
+                        type = "range",
+                        name = "EXP Height",
+                        desc = "Height of the experience bar (click value to type).",
+                        min = 10, max = 100, step = 5,
+                        disabled = function() return BetterExpBar:IsMaxLevel() end,
+                        get = function() return self.db.profile.expBar.height or 20 end,
+                        set = function(_, value)
+                            self.db.profile.expBar.height = value
+                            if expBarFrame then expBarFrame:SetHeight(value) end
+                            if largerFrame then largerFrame:SetHeight(value + 10) end
+                            if self.db.profile.barStyle.barsLinked then
+                                BetterExpBar:SynchronizeBarDimensions()
+                                BetterExpBar:UpdateLinkedBars()
+                            end
+                        end,
+                        order = 1.2,
+                    },
+                    repWidth = {
+                        type = "range",
+                        name = "REP Width",
+                        desc = "Width of the reputation bar (click value to type).",
+                        min = 100, max = 1500, step = 10,
+                        get = function() return self.db.profile.repBar.width or 1024 end,
+                        set = function(_, value)
+                            self.db.profile.repBar.width = value
+                            if repBarFrame then repBarFrame:SetWidth(value) end
+                            if self.db.profile.barStyle.barsLinked then
+                                BetterExpBar:SynchronizeBarDimensions()
+                                BetterExpBar:UpdateLinkedBars()
+                            end
+                        end,
+                        order = 1.3,
+                    },
+                    repHeight = {
+                        type = "range",
+                        name = "REP Height",
+                        desc = "Height of the reputation bar (click value to type).",
+                        min = 10, max = 100, step = 5,
+                        get = function() return self.db.profile.repBar.height or 20 end,
+                        set = function(_, value)
+                            self.db.profile.repBar.height = value
+                            if repBarFrame then repBarFrame:SetHeight(value) end
+                            if self.db.profile.barStyle.barsLinked then
+                                BetterExpBar:SynchronizeBarDimensions()
+                                BetterExpBar:UpdateLinkedBars()
+                            end
+                        end,
+                        order = 1.4,
                     },
                     scale = {
                         type = "range",
@@ -2119,13 +3037,18 @@ function BetterExpBar:RegisterOptions()
                     },
                     linkingHeader = {
                         type = "header",
-                        name = "Bar Linking",
-                        order = 5,
+                        name = "Work in Progress",
+                        order = 19,
+                    },
+                    linkingNotice = {
+                        type = "description",
+                        name = "Linking controls are temporarily disabled while we finalize stability updates.",
+                        order = 19.1,
                     },
                     barsLinked = {
                         type = "toggle",
                         name = "Link Bars Together",
-                        desc = "To be implemented in the close future. |cFF00FF00I WAS NOT PREPARED|r",
+                        desc = "Keep EXP and REP bars stacked together with matching dimensions.",
                         get = function() return self.db.profile.barStyle.barsLinked end,
                         set = function(_, value)
                             self.db.profile.barStyle.barsLinked = value
@@ -2140,13 +3063,13 @@ function BetterExpBar:RegisterOptions()
                                 BetterExpBar:UpdateRepBar()
                             end
                         end,
-                        order = 6,
+                        order = 19.2,
                         disabled = true,
                     },
                     linkedBarHeader = {
                         type = "header",
                         name = "Linked Bar Style",
-                        order = 7,
+                        order = 19.3,
                         hidden = function() return not self.db.profile.barStyle.barsLinked end,
                     },
                     linkedTexture = {
@@ -2154,11 +3077,7 @@ function BetterExpBar:RegisterOptions()
                         name = "Bar Texture",
                         desc = "Choose texture for both bars when linked",
                         values = function()
-                            if LSM then
-                                return LSM:List("statusbar")
-                            else
-                                return { ["Interface\\TargetingFrame\\UI-StatusBar"] = "UI-StatusBar" }
-                            end
+                            return BetterExpBar:GetMediaOptions("statusbar", { ["Interface\\TargetingFrame\\UI-StatusBar"] = "Blizzard" })
                         end,
                         get = function() return self.db.profile.barStyle.linkedTexture or "Interface\\TargetingFrame\\UI-StatusBar" end,
                         set = function(_, value)
@@ -2168,16 +3087,64 @@ function BetterExpBar:RegisterOptions()
                         order = 8,
                         hidden = function() return not self.db.profile.barStyle.barsLinked end,
                     },
+                    expTexture = {
+                        type = "select",
+                        name = "EXP Bar Texture",
+                        desc = "Choose the texture used by the experience bar.",
+                        disabled = function() return BetterExpBar:IsMaxLevel() end,
+                        values = function()
+                            return BetterExpBar:GetMediaOptions("statusbar", { ["Interface\\TargetingFrame\\UI-StatusBar"] = "Blizzard" })
+                        end,
+                        get = function() return self.db.profile.expBar.texture or "Interface\\TargetingFrame\\UI-StatusBar" end,
+                        set = function(_, value)
+                            self.db.profile.expBar.texture = value
+                            if expBarInner then
+                                expBarInner:SetStatusBarTexture(value)
+                            end
+                            if questXPBar then
+                                questXPBar:SetStatusBarTexture(value)
+                            end
+                            if restedBar then
+                                restedBar:SetStatusBarTexture(value)
+                            end
+                            if expTexturePreview then
+                                BetterExpBar:UpdateTexturePreview(expTexturePreview, "exp")
+                            end
+                            BetterExpBar:UpdateExpBar()
+                        end,
+                        order = 8.1,
+                        hidden = function() return self.db.profile.barStyle.barsLinked end,
+                    },
+                    repTexture = {
+                        type = "select",
+                        name = "REP Bar Texture",
+                        desc = "Choose the texture used by the reputation bar.",
+                        values = function()
+                            return BetterExpBar:GetMediaOptions("statusbar", { ["Interface\\TargetingFrame\\UI-StatusBar"] = "Blizzard" })
+                        end,
+                        get = function() return self.db.profile.repBar.texture or "Interface\\TargetingFrame\\UI-StatusBar" end,
+                        set = function(_, value)
+                            self.db.profile.repBar.texture = value
+                            if repBarInner then
+                                repBarInner:SetStatusBarTexture(value)
+                            end
+                            if bonusRepBar then
+                                bonusRepBar:SetStatusBarTexture(value)
+                            end
+                            if repTexturePreview then
+                                BetterExpBar:UpdateTexturePreview(repTexturePreview, "rep")
+                            end
+                            BetterExpBar:UpdateRepBar()
+                        end,
+                        order = 8.2,
+                        hidden = function() return self.db.profile.barStyle.barsLinked end,
+                    },
                     linkedFontFace = {
                         type = "select",
                         name = "Font",
                         desc = "Choose font for both bars when linked",
                         values = function()
-                            if LSM then
-                                return LSM:List("font")
-                            else
-                                return { ["Fonts\\FRIZQT__.TTF"] = "FRIZQT__" }
-                            end
+                            return BetterExpBar:GetMediaOptions("font", { ["Fonts\\FRIZQT__.TTF"] = "Friz Quadrata TT" })
                         end,
                         get = function() return self.db.profile.barStyle.linkedFontFace or "Fonts\\FRIZQT__.TTF" end,
                         set = function(_, value)
@@ -2200,22 +3167,10 @@ function BetterExpBar:RegisterOptions()
                         order = 10,
                         hidden = function() return not self.db.profile.barStyle.barsLinked end,
                     },
-                    linkedSyncStyle = {
-                        type = "toggle",
-                        name = "Synchronize Style",
-                        desc = "Also sync border and background when linked",
-                        get = function() return self.db.profile.barStyle.synchronizeStyle end,
-                        set = function(_, value)
-                            self.db.profile.barStyle.synchronizeStyle = value
-                            BetterExpBar:SynchronizeBarStyles()
-                        end,
-                        order = 11,
-                        hidden = function() return not self.db.profile.barStyle.barsLinked end,
-                    },
                     barOrder = {
                         type = "select",
                         name = "Bar Order",
-                        desc = "To be implemented in the close future. |cFF00FF00I WAS NOT PREPARED|r",
+                        desc = "Choose which linked bar is shown on top; linked dimensions stay synchronized.",
                         values = {
                             ["exp"] = "Experience on Top",
                             ["rep"] = "Reputation on Top",
@@ -2224,16 +3179,17 @@ function BetterExpBar:RegisterOptions()
                         set = function(_, value)
                             self.db.profile.barStyle.barOrder = value
                             if self.db.profile.barStyle.barsLinked then
+                                BetterExpBar:SynchronizeBarDimensions()
                                 BetterExpBar:UpdateLinkedBars()
                             end
                         end,
-                        order = 12,
+                        order = 19.4,
                         disabled = true,
                     },
                     lockingHeader = {
                         type = "header",
                         name = "Position Locking",
-                        order = 13,
+                        order = 20,
                     },
                     lockBarsPosition = {
                         type = "toggle",
@@ -2248,7 +3204,7 @@ function BetterExpBar:RegisterOptions()
                                 BetterExpBar:ReleaseBarLocking()
                             end
                         end,
-                        order = 14,
+                        order = 21,
                     },
                     syncStatus = {
                         type = "description",
@@ -2267,19 +3223,19 @@ function BetterExpBar:RegisterOptions()
                             end
                             return status
                         end,
-                        order = 15,
+                        order = 22,
                     },
                     resetHeader = {
                         type = "header",
                         name = "Reset Options",
-                        order = 16,
+                        order = 23,
                     },
                     resetAll = {
                         type = "execute",
                         name = "Reset All to Defaults",
                         desc = "Reset all bars to their original appearance and settings",
                         func = function() BetterExpBar:ResetAll() end,
-                        order = 17,
+                        order = 24,
                     },
                 },
             },
@@ -2403,7 +3359,6 @@ function BetterExpBar:RegisterOptions()
                         name = "Width",
                         desc = "Width of the experience bar (click value to manually enter)",
                         min = 100, max = 1500, step = 10,
-                        disabled = function() return BetterExpBar:IsMaxLevel() end,
                         get = function() return self.db.profile.expBar.width or 1024 end,
                         set = function(_, value)
                             self.db.profile.expBar.width = value
@@ -2417,7 +3372,6 @@ function BetterExpBar:RegisterOptions()
                         name = "Height",
                         desc = "Height of the experience bar (click value to manually enter)",
                         min = 10, max = 100, step = 5,
-                        disabled = function() return BetterExpBar:IsMaxLevel() end,
                         get = function() return self.db.profile.expBar.height or 20 end,
                         set = function(_, value)
                             self.db.profile.expBar.height = value
@@ -2587,6 +3541,89 @@ function BetterExpBar:RegisterOptions()
                 type = "group",
                 order = 5,
                 args = {
+                    previewHeader = {
+                        type = "header",
+                        name = "Live Preview",
+                        order = 0.1,
+                    },
+                    previewInfo = {
+                        type = "description",
+                        name = "Use the buttons below to show EXP and REP preview panes. Drag each anchor directly on screen to set placement.",
+                        order = 0.11,
+                    },
+                    previewStatus = {
+                        type = "description",
+                        name = function()
+                            local cfg = self.db.profile.tooltipPreview
+                            local expState = cfg.showExp and "|cFF00FF00ON|r" or "|cFFFF6633OFF|r"
+                            local repState = cfg.showRep and "|cFF00FF00ON|r" or "|cFFFF6633OFF|r"
+                            return "EXP Preview: " .. expState .. "   |   REP Preview: " .. repState
+                        end,
+                        order = 0.12,
+                    },
+                    previewControlsHeader = {
+                        type = "header",
+                        name = "Preview Visibility",
+                        order = 0.15,
+                    },
+                    previewExp = {
+                        type = "execute",
+                        name = function()
+                            if self.db.profile.tooltipPreview.showExp then
+                                return "Hide EXP Preview"
+                            end
+                            return "Show EXP Preview"
+                        end,
+                        desc = "Toggle the Experience preview pane",
+                        disabled = function() return BetterExpBar:IsMaxLevel() end,
+                        func = function()
+                            self.db.profile.tooltipPreview.showExp = not self.db.profile.tooltipPreview.showExp
+                            self.db.profile.tooltipPreview.enabled = self.db.profile.tooltipPreview.showExp or self.db.profile.tooltipPreview.showRep
+                            BetterExpBar:UpdateTooltipPreview()
+                        end,
+                        order = 0.2,
+                    },
+                    previewRep = {
+                        type = "execute",
+                        name = function()
+                            if self.db.profile.tooltipPreview.showRep then
+                                return "Hide REP Preview"
+                            end
+                            return "Show REP Preview"
+                        end,
+                        desc = "Toggle the Reputation preview pane",
+                        func = function()
+                            self.db.profile.tooltipPreview.showRep = not self.db.profile.tooltipPreview.showRep
+                            self.db.profile.tooltipPreview.enabled = self.db.profile.tooltipPreview.showExp or self.db.profile.tooltipPreview.showRep
+                            BetterExpBar:UpdateTooltipPreview()
+                        end,
+                        order = 0.3,
+                    },
+                    previewLayoutHeader = {
+                        type = "header",
+                        name = "Preview Placement",
+                        order = 0.4,
+                    },
+                    resetPreviewPosition = {
+                        type = "execute",
+                        name = "Reset Preview Position",
+                        desc = "Reset tooltip preview anchor to default location",
+                        func = function()
+                            BetterExpBar:ResetTooltipPositions()
+                        end,
+                        disabled = function() return not self.db.profile.tooltipPreview.enabled end,
+                        order = 0.5,
+                    },
+                    previewColorNotice = {
+                        type = "description",
+                        name = "|cFF99CCFFLive preview uses the same Tooltip Style colors as the real tooltip.|r",
+                        order = 0.6,
+                    },
+                    tooltipGeneralHeader = {
+                        type = "header",
+                        name = "Tooltip Behavior",
+                        order = 0.9,
+                    },
                     enabled = {
                         type = "toggle",
                         name = "Enable Tooltips",
@@ -2609,16 +3646,65 @@ function BetterExpBar:RegisterOptions()
                         end,
                         order = 2,
                     },
-                    offsetY = {
+                    tooltipPositionHeader = {
+                        type = "header",
+                        name = "Tooltip Position Offsets",
+                        order = 2.5,
+                    },
+                    expOffsetX = {
                         type = "range",
-                        name = "Vertical Offset",
-                        desc = "Distance from bar to tooltip",
-                        min = 0, max = 50, step = 1,
-                        get = function() return self.db.profile.tooltip.offsetY end,
+                        name = "EXP X Offset",
+                        desc = "Horizontal offset for experience tooltip",
+                        min = -300, max = 300, step = 1,
+                        disabled = function() return BetterExpBar:IsMaxLevel() end,
+                        get = function() return self.db.profile.tooltip.expOffsetX or 0 end,
                         set = function(_, value)
-                            self.db.profile.tooltip.offsetY = value
+                            self.db.profile.tooltip.expOffsetX = value
+                            BetterExpBar:UpdateTooltipPreview()
                         end,
                         order = 3,
+                    },
+                    expOffsetY = {
+                        type = "range",
+                        name = "EXP Y Offset",
+                        desc = "Vertical offset for experience tooltip",
+                        min = -100, max = 200, step = 1,
+                        disabled = function() return BetterExpBar:IsMaxLevel() end,
+                        get = function() return self.db.profile.tooltip.expOffsetY or self.db.profile.tooltip.offsetY or 10 end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.expOffsetY = value
+                            BetterExpBar:UpdateTooltipPreview()
+                        end,
+                        order = 3.1,
+                    },
+                    repOffsetX = {
+                        type = "range",
+                        name = "REP X Offset",
+                        desc = "Horizontal offset for reputation tooltip",
+                        min = -300, max = 300, step = 1,
+                        get = function() return self.db.profile.tooltip.repOffsetX or 0 end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.repOffsetX = value
+                            BetterExpBar:UpdateTooltipPreview()
+                        end,
+                        order = 3.2,
+                    },
+                    repOffsetY = {
+                        type = "range",
+                        name = "REP Y Offset",
+                        desc = "Vertical offset for reputation tooltip",
+                        min = -100, max = 200, step = 1,
+                        get = function() return self.db.profile.tooltip.repOffsetY or self.db.profile.tooltip.offsetY or 10 end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.repOffsetY = value
+                            BetterExpBar:UpdateTooltipPreview()
+                        end,
+                        order = 3.3,
+                    },
+                    tooltipStyleHeader = {
+                        type = "header",
+                        name = "Tooltip Style",
+                        order = 3.8,
                     },
                     backgroundColor = {
                         type = "color",
@@ -2674,12 +3760,12 @@ function BetterExpBar:RegisterOptions()
                         type = "toggle",
                         name = "Verbose Numbers",
                         desc = "Display numbers with full decimal places (e.g., 40,059 as 40.0k). Disables Common Abbreviation.",
-                        disabled = function() return BetterExpBar:IsMaxLevel() end,
                         get = function() return self.db.profile.expDisplay.useVerbose end,
                         set = function(_, value)
                             self.db.profile.expDisplay.useVerbose = value
                             if value then
                                 self.db.profile.expDisplay.useCommon = false
+                                self.db.profile.expDisplay.useCommaFormat = false
                             end
                             BetterExpBar:UpdateTooltipText()
                             BetterExpBar:UpdateRepTooltip()
@@ -2690,22 +3776,38 @@ function BetterExpBar:RegisterOptions()
                         type = "toggle",
                         name = "Common Abbreviation",
                         desc = "Use common abbreviations (40k, 1M) instead of verbose decimals. Disables Verbose Numbers.",
-                        disabled = function() return BetterExpBar:IsMaxLevel() end,
                         get = function() return self.db.profile.expDisplay.useCommon end,
                         set = function(_, value)
                             self.db.profile.expDisplay.useCommon = value
                             if value then
                                 self.db.profile.expDisplay.useVerbose = false
+                                self.db.profile.expDisplay.useCommaFormat = false
                             end
                             BetterExpBar:UpdateTooltipText()
                             BetterExpBar:UpdateRepTooltip()
                         end,
                         order = 7.7,
                     },
+                    useCommaFormat = {
+                        type = "toggle",
+                        name = "Comma Separated",
+                        desc = "Display numbers with comma separators (40,393). Disables other formats.",
+                        get = function() return self.db.profile.expDisplay.useCommaFormat end,
+                        set = function(_, value)
+                            self.db.profile.expDisplay.useCommaFormat = value
+                            if value then
+                                self.db.profile.expDisplay.useCommon = false
+                                self.db.profile.expDisplay.useVerbose = false
+                            end
+                            BetterExpBar:UpdateTooltipText()
+                            BetterExpBar:UpdateRepTooltip()
+                        end,
+                        order = 7.8,
+                    },
                     expTooltipHeader = {
                         type = "header",
                         name = "Experience Bar Tooltip",
-                        order = 8,
+                        order = 8.05,
                     },
                     expShowLevel = {
                         type = "toggle",
@@ -2717,7 +3819,7 @@ function BetterExpBar:RegisterOptions()
                             self.db.profile.tooltip.expTooltip.showLevel = value
                             BetterExpBar:UpdateTooltipText()
                         end,
-                        order = 7,
+                        order = 8.15,
                     },
                     expShowCurrent = {
                         type = "toggle",
@@ -2729,7 +3831,7 @@ function BetterExpBar:RegisterOptions()
                             self.db.profile.tooltip.expTooltip.showCurrent = value
                             BetterExpBar:UpdateTooltipText()
                         end,
-                        order = 8,
+                        order = 8.25,
                     },
                     expShowRested = {
                         type = "toggle",
@@ -2741,7 +3843,7 @@ function BetterExpBar:RegisterOptions()
                             self.db.profile.tooltip.expTooltip.showRested = value
                             BetterExpBar:UpdateTooltipText()
                         end,
-                        order = 9,
+                        order = 8.35,
                     },
                     expShowRemaining = {
                         type = "toggle",
@@ -2753,7 +3855,7 @@ function BetterExpBar:RegisterOptions()
                             self.db.profile.tooltip.expTooltip.showRemaining = value
                             BetterExpBar:UpdateTooltipText()
                         end,
-                        order = 10,
+                        order = 8.45,
                     },
                     expShowPercentage = {
                         type = "toggle",
@@ -2765,12 +3867,96 @@ function BetterExpBar:RegisterOptions()
                             self.db.profile.tooltip.expTooltip.showPercentage = value
                             BetterExpBar:UpdateTooltipText()
                         end,
-                        order = 11,
+                        order = 8.55,
+                    },
+                    nitExpHeader = {
+                        type = "header",
+                        name = "NovaInstanceTracker XP Stats (Optional)",
+                        hidden = function() return not BetterExpBar:IsNITAvailable() end,
+                        order = 10,
+                    },
+                    nitExpNotice = {
+                        type = "description",
+                        name = "|cffff0000NovaInstanceTracker is not loaded. Features below disabled. Stats will fall back to session tracking.|r",
+                        hidden = function() return BetterExpBar:IsNITAvailable() end,
+                        order = 10.05,
+                    },
+                    expShowXpPerHour = {
+                        type = "toggle",
+                        name = "Show XP Per Hour",
+                        desc = "Display XP gained per hour",
+                        disabled = function() return BetterExpBar:IsMaxLevel() or not BetterExpBar:IsNITAvailable() end,
+                        get = function() return self.db.profile.tooltip.expTooltip.showXpPerHour end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.expTooltip.showXpPerHour = value
+                            BetterExpBar:UpdateTooltipText()
+                        end,
+                        order = 10.1,
+                    },
+                    expShowXpPerHourPercent = {
+                        type = "toggle",
+                        name = "Show XP Per Hour (%)",
+                        desc = "Display XP per hour as percentage of level",
+                        disabled = function() return BetterExpBar:IsMaxLevel() or not BetterExpBar:IsNITAvailable() or not self.db.profile.tooltip.expTooltip.showXpPerHour end,
+                        get = function() return self.db.profile.tooltip.expTooltip.showXpPerHourPercent end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.expTooltip.showXpPerHourPercent = value
+                            BetterExpBar:UpdateTooltipText()
+                        end,
+                        order = 10.11,
+                    },
+                    expShowXpFromLastInstance = {
+                        type = "toggle",
+                        name = "Show XP From Last Instance",
+                        desc = "Display XP gained from the last instance",
+                        disabled = function() return BetterExpBar:IsMaxLevel() or not BetterExpBar:IsNITAvailable() end,
+                        get = function() return self.db.profile.tooltip.expTooltip.showXpFromLastInstance end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.expTooltip.showXpFromLastInstance = value
+                            BetterExpBar:UpdateTooltipText()
+                        end,
+                        order = 10.2,
+                    },
+                    expShowXpFromLastInstancePercent = {
+                        type = "toggle",
+                        name = "Show Instance XP (%)",
+                        desc = "Display instance XP as percentage of level",
+                        disabled = function() return BetterExpBar:IsMaxLevel() or not BetterExpBar:IsNITAvailable() or not self.db.profile.tooltip.expTooltip.showXpFromLastInstance end,
+                        get = function() return self.db.profile.tooltip.expTooltip.showXpFromLastInstancePercent end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.expTooltip.showXpFromLastInstancePercent = value
+                            BetterExpBar:UpdateTooltipText()
+                        end,
+                        order = 10.21,
+                    },
+                    expShowXpTodayTotal = {
+                        type = "toggle",
+                        name = "Show Today's Total XP",
+                        desc = "Display total XP gained today",
+                        disabled = function() return BetterExpBar:IsMaxLevel() or not BetterExpBar:IsNITAvailable() end,
+                        get = function() return self.db.profile.tooltip.expTooltip.showXpTodayTotal end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.expTooltip.showXpTodayTotal = value
+                            BetterExpBar:UpdateTooltipText()
+                        end,
+                        order = 10.3,
+                    },
+                    expShowXpTodayTotalPercent = {
+                        type = "toggle",
+                        name = "Show Today Total XP (%)",
+                        desc = "Display today's total XP as percentage of level",
+                        disabled = function() return BetterExpBar:IsMaxLevel() or not BetterExpBar:IsNITAvailable() or not self.db.profile.tooltip.expTooltip.showXpTodayTotal end,
+                        get = function() return self.db.profile.tooltip.expTooltip.showXpTodayTotalPercent end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.expTooltip.showXpTodayTotalPercent = value
+                            BetterExpBar:UpdateTooltipText()
+                        end,
+                        order = 10.31,
                     },
                     repTooltipHeader = {
                         type = "header",
                         name = "Reputation Bar Tooltip",
-                        order = 12,
+                        order = 9,
                     },
                     repShowFactionName = {
                         type = "toggle",
@@ -2781,7 +3967,7 @@ function BetterExpBar:RegisterOptions()
                             self.db.profile.tooltip.repTooltip.showFactionName = value
                             BetterExpBar:UpdateRepTooltip()
                         end,
-                        order = 13,
+                        order = 9.1,
                     },
                     repShowStanding = {
                         type = "toggle",
@@ -2792,7 +3978,7 @@ function BetterExpBar:RegisterOptions()
                             self.db.profile.tooltip.repTooltip.showStanding = value
                             BetterExpBar:UpdateRepTooltip()
                         end,
-                        order = 14,
+                        order = 9.2,
                     },
                     repShowCurrent = {
                         type = "toggle",
@@ -2803,7 +3989,7 @@ function BetterExpBar:RegisterOptions()
                             self.db.profile.tooltip.repTooltip.showCurrent = value
                             BetterExpBar:UpdateRepTooltip()
                         end,
-                        order = 15,
+                        order = 9.3,
                     },
                     repShowRemaining = {
                         type = "toggle",
@@ -2814,7 +4000,91 @@ function BetterExpBar:RegisterOptions()
                             self.db.profile.tooltip.repTooltip.showRemaining = value
                             BetterExpBar:UpdateRepTooltip()
                         end,
-                        order = 16,
+                        order = 9.4,
+                    },
+                    nitRepHeader = {
+                        type = "header",
+                        name = "NovaInstanceTracker Rep Stats (Optional)",
+                        hidden = function() return not BetterExpBar:IsNITAvailable() end,
+                        order = 11,
+                    },
+                    nitRepNotice = {
+                        type = "description",
+                        name = "|cffff0000NovaInstanceTracker is not loaded. Features below disabled. Stats will fall back to session tracking.|r",
+                        hidden = function() return BetterExpBar:IsNITAvailable() end,
+                        order = 11.05,
+                    },
+                    repShowRepPerHour = {
+                        type = "toggle",
+                        name = "Show Rep Per Hour",
+                        desc = "Display reputation gained per hour",
+                        disabled = function() return not BetterExpBar:IsNITAvailable() end,
+                        get = function() return self.db.profile.tooltip.repTooltip.showRepPerHour end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.repTooltip.showRepPerHour = value
+                            BetterExpBar:UpdateRepTooltip()
+                        end,
+                        order = 11.1,
+                    },
+                    repShowRepPerHourPercent = {
+                        type = "toggle",
+                        name = "Show Rep Per Hour (%)",
+                        desc = "Display rep per hour as percentage of rep to standing",
+                        disabled = function() return not BetterExpBar:IsNITAvailable() or not self.db.profile.tooltip.repTooltip.showRepPerHour end,
+                        get = function() return self.db.profile.tooltip.repTooltip.showRepPerHourPercent end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.repTooltip.showRepPerHourPercent = value
+                            BetterExpBar:UpdateRepTooltip()
+                        end,
+                        order = 11.11,
+                    },
+                    repShowRepFromLastInstance = {
+                        type = "toggle",
+                        name = "Show Rep From Last Instance",
+                        desc = "Display reputation gained from the last instance",
+                        disabled = function() return not BetterExpBar:IsNITAvailable() end,
+                        get = function() return self.db.profile.tooltip.repTooltip.showRepFromLastInstance end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.repTooltip.showRepFromLastInstance = value
+                            BetterExpBar:UpdateRepTooltip()
+                        end,
+                        order = 11.2,
+                    },
+                    repShowRepFromLastInstancePercent = {
+                        type = "toggle",
+                        name = "Show Instance Rep (%)",
+                        desc = "Display instance rep as percentage of rep to standing",
+                        disabled = function() return not BetterExpBar:IsNITAvailable() or not self.db.profile.tooltip.repTooltip.showRepFromLastInstance end,
+                        get = function() return self.db.profile.tooltip.repTooltip.showRepFromLastInstancePercent end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.repTooltip.showRepFromLastInstancePercent = value
+                            BetterExpBar:UpdateRepTooltip()
+                        end,
+                        order = 11.21,
+                    },
+                    repShowRepTodayTotal = {
+                        type = "toggle",
+                        name = "Show Today's Total Rep",
+                        desc = "Display total reputation gained today",
+                        disabled = function() return not BetterExpBar:IsNITAvailable() end,
+                        get = function() return self.db.profile.tooltip.repTooltip.showRepTodayTotal end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.repTooltip.showRepTodayTotal = value
+                            BetterExpBar:UpdateRepTooltip()
+                        end,
+                        order = 11.3,
+                    },
+                    repShowRepTodayTotalPercent = {
+                        type = "toggle",
+                        name = "Show Today Total Rep (%)",
+                        desc = "Display today's total rep as percentage of rep to standing",
+                        disabled = function() return not BetterExpBar:IsNITAvailable() or not self.db.profile.tooltip.repTooltip.showRepTodayTotal end,
+                        get = function() return self.db.profile.tooltip.repTooltip.showRepTodayTotalPercent end,
+                        set = function(_, value)
+                            self.db.profile.tooltip.repTooltip.showRepTodayTotalPercent = value
+                            BetterExpBar:UpdateRepTooltip()
+                        end,
+                        order = 11.31,
                     },
                 },
             },
@@ -2825,7 +4095,7 @@ function BetterExpBar:RegisterOptions()
                 args = {
                     description = {
                         type = "description",
-                        name = "|cFF00FF00Better Experience Bars|r\n\n|cFFFFFFFFVersion:|r 3.0.5\n|cFFFFFFFFAuthor:|r Pegga\n\n|cFFFFFFFFDescription:|r\nMoveable experience and reputation bars for WoW with customizable colors, opacity, and tooltip options.\n\n|cFFFFFFFFFeatures:|r\n• Customizable experience and reputation bars\n• Per-character profile management\n• Detailed tooltip configuration\n• Bar styling options (scale, opacity, colors)\n• Minimap button with DBIcon support\n• AceConfig-based options interface\n\n|cFFFFFFFFLibraries:|r\n• Ace3 Framework\n• LibDataBroker-1.1\n• LibDBIcon-1.0\n\nFor more information, visit the addon's homepage or use /bexpbar command for options.",
+                        name = "|cFF00FF00Better Experience Bars|r\n\n|cFFFFFFFFVersion:|r 3.0.5\n|cFFFFFFFFAuthor:|r Pegga\n\n|cFFFFFFFFDescription:|r\nMoveable experience and reputation bars for WoW with customizable colors, styles, and detailed tooltip options.\n\n|cFFFFFFFFFeatures:|r\n• Customizable moveable EXP and REP bars\n• Per-character saved settings with AceDB\n• Advanced tooltip configuration\n• Number formatting (abbreviations, verbose, comma-separated)\n• Bar styling (texture, color, opacity, scale)\n• Minimap button support\n• Optional NovaInstanceTracker integration for session stats\n\n|cFFFFFFFFLibraries:|r\n• Ace3 Framework\n• LibDataBroker-1.1\n• LibDBIcon-1.0\n\n|cFFFFFFFFOptional Dependencies:|r\n• NovaInstanceTracker - For advanced instance tracking stats\n• Questie for XP estimate from Quests \n• WeakAuras & Details for textures/fonts \n\n To open options\n• Right-click your bars. \n• Minimap Button \n• Type /beb for a list of commands.",
                         fontSize = "medium",
                         order = 1,
                     },

@@ -1,3 +1,57 @@
+Version 3.0.6 - April 21, 2026
+MAX LEVEL HANDLING & ERROR FIXES
+- Fixed UpdateTooltipText crash by adding nil check for tooltip frames not yet initialized.
+- Added IsMaxLevel() helper function to reliably detect when player level equals max level.
+- Disabled all experience bar controls when player reaches max level (prevents configuration of inactive feature).
+- Grayed out General tab "Enable Experience Bar" toggle at max level.
+- Grayed out Appearance tab exp/rested/quest color pickers at max level.
+- Grayed out Experience tab (entire tab disabled when max level including opacity, text size, format, color, quest XP).
+- Grayed out Experience tab scale slider in Bar Style when max level.
+- Grayed out Bar Style exp dimension sliders (width, height) and texture selector at max level.
+- Grayed out Tooltips tab exp offset controls (X and Y offsets) at max level.
+- Grayed out Tooltips tab number format options (verbose, common abbreviation) at max level.
+- Grayed out Tooltips tab exp display toggles (level, current, rested, remaining, percentage) at max level.
+- Grayed out Tooltips tab NovaInstanceTracker stats (if available) at max level (all XP per hour, instance XP, today totals).
+- Applied all max-level disables consistently across both betterexpbar.lua (TBC) and bexpbar.lua (Classic) files.
+
+Version 3.0.5 - April 21, 2026
+- Fixed Blizzard native EXP/REP bar visibility toggling to follow addon checkboxes.
+- Added native bar visibility application on load, world entry, slash toggles, and disable flows.
+- Removed unused optional media/helper libs from TOC loading to resolve LibSharedMedia startup errors.
+- Bumped addon metadata version to 3.0.5 across TOC files and in-game About/Options text.
+- Added live tooltip preview panes in the Tooltips tab with on-screen draggable anchors.
+- Replaced preview checkbox/dropdown flow with button-based EXP/REP preview toggles.
+- Added independent EXP and REP preview anchors and saved placement per tooltip type.
+- Added independent EXP/REP tooltip horizontal and vertical offset controls.
+- Updated live bar tooltips to anchor to their matching saved preview positions.
+- Prevented duplicate tooltip display by suppressing normal hover tooltips while preview mode is active.
+- Fixed preview FontString initialization ordering to resolve "Font not set" errors.
+- Reorganized Tooltips > Live Preview section for clearer grouping and readability.
+- Fixed tooltip and live preview background-color rendering by switching to tintable tooltip backdrop textures.
+- Added LibSharedMedia loading in addon TOCs so external shared fonts/textures are available in options.
+- Registered bundled custom media assets from Media/Fonts and Media/Textures with LibSharedMedia.
+- Added per-bar texture selection in Bar Style (separate EXP and REP texture choices when bars are unlinked).
+- Kept linked-bar texture control for synchronized bars and expanded texture sources via LibSharedMedia.
+- Enabled General tab Bar Font selection and added General tab Tooltip Font selection.
+- Repurposed the old General tab Bar Texture control into dedicated Tooltip Font controls.
+- Fixed font assignment override where LibSharedMedia defaults could replace selected custom font paths.
+- Improved font refresh flow so bar text, tooltip text, and live preview text update immediately on font changes.
+- Updated Reset Position flows so tooltip preview anchors and live tooltip positions reset consistently.
+- Updated Reset Preview Position to place EXP/REP preview anchors to centered defaults just above their bars.
+- Removed remaining General tab font preview text lines ("Font Preview" and the quick-brown-fox sample).
+- Updated preview visibility behavior so EXP/REP preview panes always start hidden after /reload.
+- Cleaned Bar Style tab by removing obsolete Synchronize Style controls and enabling active link/order controls.
+- Fixed Bar Style border and backdrop styling updates so border color/alpha changes apply immediately to bar frames.
+- Enabled Link Bars Together and Bar Order workflows with stronger dimension synchronization checks to prevent width/height mismatch issues.
+
+Version 3.0.4 - February 8, 2026
+- Fixed NIT XP/Rep tooltip calculations for per-day instance totals
+- Matched XP/Rep per-hour to total instance time today
+- Resolved tooltip refresh and Lua errors in NIT stats
+
+Version 3.0.3 - February 7, 2026
+- Updated folder Name
+
 Version 3.0.2 - February 7, 2026
 - Updated .Toc to include all TBC versions and Classic
 - Updated file to post in correct directory (sorry)
