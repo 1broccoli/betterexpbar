@@ -1,3 +1,8 @@
+Version 3.0.7 - May 15, 2026
+CURSEFORGE PACKAGING
+- Added .pkgmeta with package-as: betterexpbar to ensure release archives install into Interface/AddOns/betterexpbar.
+- Fixed packaging behavior where files could be extracted directly into Interface/AddOns root.
+
 Version 3.0.6 - April 21, 2026
 MAX LEVEL HANDLING & ERROR FIXES
 - Fixed UpdateTooltipText crash by adding nil check for tooltip frames not yet initialized.
@@ -112,4 +117,6 @@ Date:   Thu Jan 22 16:05:49 2026 -0700
     - Profile options accessible through minimap button and Blizzard options panel
     - Changed from SavedVariables to SavedVariablesPerCharacter in TOC file
     - Each character maintains independent profile sets for bar positions, colors, and preferences
+
+
 

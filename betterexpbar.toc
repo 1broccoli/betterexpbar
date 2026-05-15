@@ -2,7 +2,7 @@
 ## Title: |cFFFFC0CBBetter|r Experience Bars
 ## Notes: Moveable experience and reputation bars for WoW TBC
 ## Author: Pegga
-## Version: 3.0.6
+## Version: 3.0.7
 ## SavedVariablesPerCharacter: BetterExpBarDB
 ## OptionalDeps: Questie, WeakAuras, Details, Ace3, NovaInstanceTracker
 ## X-Curse-Project-ID: 1228891
@@ -23,3 +23,5 @@ Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 Libs\LibDBIcon-1.0\LibDBIcon-1.0.xml
 
 betterexpbar.lua
+
+
