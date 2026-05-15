@@ -1,3 +1,8 @@
+Version 3.0.8 - May 15, 2026
+RELEASE ALIGNMENT
+- Finalized packaging-folder fix release with aligned addon metadata and GitHub release tag.
+- Addon archive remains packaged into Interface/AddOns/betterexpbar via .pkgmeta package-as setting.
+
 Version 3.0.7 - May 15, 2026
 CURSEFORGE PACKAGING
 - Added .pkgmeta with package-as: betterexpbar to ensure release archives install into Interface/AddOns/betterexpbar.
@@ -117,6 +122,7 @@ Date:   Thu Jan 22 16:05:49 2026 -0700
     - Profile options accessible through minimap button and Blizzard options panel
     - Changed from SavedVariables to SavedVariablesPerCharacter in TOC file
     - Each character maintains independent profile sets for bar positions, colors, and preferences
+
 
 
 
